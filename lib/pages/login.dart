@@ -1,123 +1,251 @@
+import 'dart:convert';
 import 'dart:developer';
 
+import 'package:Lotto2025/config/config.dart';
+import 'package:Lotto2025/model/response/customer_login_response.dart';
+import 'package:Lotto2025/pages/mainApp.dart';
 import 'package:Lotto2025/pages/register.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(appBar: AppBar(
-      // title: Text("Login Page"),
-      ), 
-      body: SizedBox(
-        width: MediaQuery.of(context).size.width,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Image.asset('assets/images/logo.png',fit: BoxFit.contain),
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Lotto2025",
-                    style: TextStyle(fontSize: 45, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 30.0, right: 20, left: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("เบอร์โทรศัพท์",
-                      style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'เบอร์โทรศัพท์',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), // border circle
-                        prefixIcon: Icon(Icons.phone),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+  State<LoginPage> createState() => _LoginPageState();
+}
 
-              Padding(
-                padding: const EdgeInsets.only(top: 30.0, right: 20, left: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("รหัสผ่าน",
-                      style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      keyboardType: TextInputType.visiblePassword,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'รหัสผ่าน',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), // border circle
-                        prefixIcon: Icon(Icons.lock),
-                      ),
-                    ),
-                  ],
-                )
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20.0, top: 50),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(
-                      onPressed: () => register(context), child: const Text("ลงทะเบียน",
-                      style: TextStyle(fontSize: 25),
-                    )),
-                    FilledButton(
-                      onPressed: () {},
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
-                        minimumSize: const Size(0, 0),
-                      ),
-                      child: const Text(
-                        "เข้าสู่ระบบ",
-                        style: TextStyle(fontSize: 25),
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),      
-      ), 
-    );
+class _LoginPageState extends State<LoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  String apiUrl = '';
+  bool isLoadingConfig = true;
+  bool isLoggingIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
   }
 
-  void register(BuildContext context) {
-    log("register");
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const RegisterPage(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 100), // fade speed
+  @override
+  Widget build(BuildContext context) {
+    if (isLoadingConfig) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Image.asset('assets/images/logo.png', fit: BoxFit.contain)),
+            const SizedBox(height: 20),
+            const Center(
+              child: Text(
+                "Lotto2025",
+                style: TextStyle(fontSize: 45, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 40),
+
+            const Text(
+              "ชื่อผู้ใช้",
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _usernameController,
+              decoration: InputDecoration(
+                labelText: 'ชื่อผู้ใช้',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon: const Icon(Icons.supervised_user_circle_rounded),
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            const Text(
+              "รหัสผ่าน",
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _passwordController,
+              keyboardType: TextInputType.visiblePassword,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'รหัสผ่าน',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                prefixIcon: const Icon(Icons.lock),
+              ),
+            ),
+            const SizedBox(height: 50),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: () => register(context),
+                  child: const Text("ลงทะเบียน", style: TextStyle(fontSize: 25)),
+                ),
+                FilledButton(
+                  onPressed: apiUrl.isEmpty || isLoggingIn
+                      ? null
+                      : () {
+                          final username = _usernameController.text.trim();
+                          final pass = _passwordController.text.trim();
+                          login(username, pass);
+                        },
+                  style: FilledButton.styleFrom(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
+                    minimumSize: const Size(0, 0),
+                  ),
+                  child: isLoggingIn
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text("เข้าสู่ระบบ", style: TextStyle(fontSize: 25)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void login(String phone, String pass) {
-    log("login");
+  Future<void> _loadConfig() async {
+    try {
+      final config = await Configuration.getConfig();
+      setState(() {
+        apiUrl = config['apiEndpoint'] ?? '';
+        isLoadingConfig = false;
+      });
+      log('API URL loaded: $apiUrl');
+    } catch (e) {
+      setState(() {
+        isLoadingConfig = false;
+      });
+      log('Failed to load config: $e');
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Error'),
+            content: const Text('ไม่สามารถโหลดการตั้งค่า API ได้'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('ตกลง'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<CustomerLoginPostResponse?> loginRequest({
+    required String apiUrl,
+    required String username,
+    required String password,
+  }) async {
+    final uri = Uri.parse('$apiUrl/auth/login');
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        log('Response body: ${response.body}');
+        final jsonData = jsonDecode(response.body);
+        if (jsonData == null || jsonData['member'] == null) {
+          log('Response JSON is missing member data');
+          return null;
+        }
+        return CustomerLoginPostResponse.fromJson(jsonData);
+      } else {
+        log('เข้าสู่ระบบล้มเหลว: ${response.statusCode}');
+        return null;
+      }
+    } catch (e) {
+      log('ข้อผิดพลาดเครือข่าย: $e');
+      return null;
+    }
+  }
+
+
+  Future<void> login(String username, String password) async {
+    if (isLoggingIn) return;
+
+    setState(() {
+      isLoggingIn = true;
+    });
+
+    final response = await loginRequest(
+      apiUrl: apiUrl,
+      username: username,
+      password: password,
+    );
+
+    setState(() {
+      isLoggingIn = false;
+    });
+
+    if (!mounted) return;
+
+    if (response != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ')),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const MainApp(),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 100),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('เข้าสู่ระบบล้มเหลว'),
+          content: const Text('กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ตกลง'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void register(BuildContext context) {
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const RegisterPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 100),
+      ),
+    );
   }
 }
