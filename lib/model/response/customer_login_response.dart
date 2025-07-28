@@ -1,3 +1,5 @@
+import 'package:jwt_decoder/jwt_decoder.dart';
+
 class CustomerLoginPostResponse {
   bool success;
   String message;
@@ -11,13 +13,18 @@ class CustomerLoginPostResponse {
     required this.member,
   });
 
-  factory CustomerLoginPostResponse.fromJson(Map<String, dynamic> json) =>
-      CustomerLoginPostResponse(
-        success: json["success"],
-        message: json["message"],
-        token: json["token"],
-        member: Member.fromJson(json["member"]),
-      );
+  factory CustomerLoginPostResponse.fromJson(Map<String, dynamic> json) {
+    final token = json["token"];
+    final decodedToken = JwtDecoder.decode(token);
+    final member = Member.fromJson(decodedToken);
+
+    return CustomerLoginPostResponse(
+      success: json["success"],
+      message: json["message"],
+      token: token,
+      member: member,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         "success": success,
@@ -40,7 +47,7 @@ class Member {
 
   factory Member.fromJson(Map<String, dynamic> json) => Member(
         username: json["username"],
-        money: json["money"],
+        money: (json["money"] as num).toInt(), // ป้องกัน double->int
         role: json["role"],
       );
 

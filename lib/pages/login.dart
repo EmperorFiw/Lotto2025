@@ -7,6 +7,7 @@ import 'package:Lotto2025/pages/mainApp.dart';
 import 'package:Lotto2025/pages/register.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -53,7 +54,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: 40),
-
             const Text(
               "ชื่อผู้ใช้",
               style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
@@ -68,7 +68,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: 30),
-
             const Text(
               "รหัสผ่าน",
               style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
@@ -85,7 +84,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             const SizedBox(height: 50),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -102,8 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                           login(username, pass);
                         },
                   style: FilledButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
                     minimumSize: const Size(0, 0),
                   ),
                   child: isLoggingIn
@@ -159,31 +156,37 @@ class _LoginPageState extends State<LoginPage> {
     required String password,
   }) async {
     final uri = Uri.parse('$apiUrl/auth/login');
+
     try {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+        }),
       );
 
+      final body = response.body;
+      log('[log] Response body: $body');
+
       if (response.statusCode == 200) {
-        log('Response body: ${response.body}');
-        final jsonData = jsonDecode(response.body);
-        if (jsonData == null || jsonData['member'] == null) {
-          log('Response JSON is missing member data');
-          return null;
+        final jsonResponse = json.decode(body);
+        final token = jsonResponse['token'];
+        if (token != null) {
+          handleLogin(token);
         }
-        return CustomerLoginPostResponse.fromJson(jsonData);
+        return CustomerLoginPostResponse.fromJson(jsonResponse);
       } else {
-        log('เข้าสู่ระบบล้มเหลว: ${response.statusCode}');
-        return null;
+        final jsonError = jsonDecode(body);
+        final message = jsonError['message'] ?? 'เข้าสู่ระบบล้มเหลว';
+        throw Exception(message);
       }
     } catch (e) {
       log('ข้อผิดพลาดเครือข่าย: $e');
-      return null;
+      rethrow;
     }
   }
-
 
   Future<void> login(String username, String password) async {
     if (isLoggingIn) return;
@@ -192,19 +195,15 @@ class _LoginPageState extends State<LoginPage> {
       isLoggingIn = true;
     });
 
-    final response = await loginRequest(
-      apiUrl: apiUrl,
-      username: username,
-      password: password,
-    );
+    try {
+      final response = await loginRequest(
+        apiUrl: apiUrl,
+        username: username,
+        password: password,
+      );
 
-    setState(() {
-      isLoggingIn = false;
-    });
+      if (!mounted) return;
 
-    if (!mounted) return;
-
-    if (response != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ')),
       );
@@ -218,12 +217,13 @@ class _LoginPageState extends State<LoginPage> {
           transitionDuration: const Duration(milliseconds: 100),
         ),
       );
-    } else {
+    } catch (e) {
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('เข้าสู่ระบบล้มเหลว'),
-          content: const Text('กรุณาตรวจสอบชื่อผู้ใช้และรหัสผ่าน'),
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -232,6 +232,29 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoggingIn = false;
+        });
+      }
+    }
+  }
+
+  void handleLogin(String token) {
+    try {
+      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+      log("🟢 Token Decoded: $decodedToken");
+
+      String username = decodedToken['username'] ?? 'ไม่ทราบชื่อ';
+      double money = (decodedToken['money'] as num?)?.toDouble() ?? 0.0;
+      String role = decodedToken['role'] ?? 'ไม่ทราบ';
+
+      log("👤 Username: $username");
+      log("💰 Money: $money");
+      log("🛡️ Role: $role");
+    } catch (e) {
+      log("❌ ไม่สามารถ decode token ได้: $e");
     }
   }
 
