@@ -3,11 +3,11 @@ import 'dart:developer';
 
 import 'package:Lotto2025/config/config.dart';
 import 'package:Lotto2025/model/response/customer_login_response.dart';
+import 'package:Lotto2025/model/user/user_state.dart';
 import 'package:Lotto2025/pages/mainApp.dart';
 import 'package:Lotto2025/pages/register.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:jwt_decoder/jwt_decoder.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -243,20 +243,24 @@ class _LoginPageState extends State<LoginPage> {
 
   void handleLogin(String token) {
     try {
-      Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
-      log("🟢 Token Decoded: $decodedToken");
+      UserState().token = token;
 
-      String username = decodedToken['username'] ?? 'ไม่ทราบชื่อ';
-      double money = (decodedToken['money'] as num?)?.toDouble() ?? 0.0;
-      String role = decodedToken['role'] ?? 'ไม่ทราบ';
+      final user = UserState().currentUser;
 
-      log("👤 Username: $username");
-      log("💰 Money: $money");
-      log("🛡️ Role: $role");
+      if (user != null) {
+        log('User info after login:');
+        log('Username: ${user.username}');
+        log('Phone: ${user.phone}');
+        log('Role: ${user.role}');
+        log('Money: ${user.money}');
+      } else {
+        log('User is null after setting token');
+      }
     } catch (e) {
-      log("❌ ไม่สามารถ decode token ได้: $e");
+      log('Error in handleLogin: $e');
     }
   }
+
 
   void register(BuildContext context) {
     Navigator.pushReplacement(

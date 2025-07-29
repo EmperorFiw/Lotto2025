@@ -1,4 +1,4 @@
-import 'package:Lotto2025/pages/login.dart';
+import 'package:Lotto2025/pages/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
           backgroundColor: customScheme.primary,
         ),
       ),
-      home: const LoginPage(),
+      home: const SplashScreen(),
     );
   }
 }
