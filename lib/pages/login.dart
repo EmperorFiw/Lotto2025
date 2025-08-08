@@ -261,7 +261,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-
   void register(BuildContext context) {
     Navigator.pushReplacement(
       context,
