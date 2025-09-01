@@ -33,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     try {
       final config = await Configuration.getConfig();
-      log('Config loaded: $config');  // เพิ่มบรรทัดนี้ดูค่า config
+      log('Config loaded: $config'); // เพิ่มบรรทัดนี้ดูค่า config
       apiEndpoint = config['apiEndpoint'] ?? '';
 
       if (apiEndpoint == null || apiEndpoint!.isEmpty) {
@@ -44,29 +44,33 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      final response = await http.get(Uri.parse('$apiEndpoint/health_check')).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(Uri.parse('$apiEndpoint/health_check'))
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         _goToLogin();
       } else {
         setState(() {
-          errorMessage = '(Error code: ${response.statusCode}) กรุณาลองใหม่อีกครั้ง';
+          errorMessage =
+              '(Error code: ${response.statusCode}) กรุณาลองใหม่อีกครั้ง';
           isCheckingApi = false;
         });
       }
     } on TimeoutException {
       setState(() {
-        errorMessage = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ เนื่องจากหมดเวลาการเชื่อมต่อ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง';
+        errorMessage =
+            'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ เนื่องจากหมดเวลาการเชื่อมต่อ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง';
         isCheckingApi = false;
       });
     } catch (e) {
       setState(() {
-        errorMessage = 'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง';
+        errorMessage =
+            'เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง';
         isCheckingApi = false;
       });
     }
   }
-
 
   void _retry() {
     _loadConfigAndCheckApi();

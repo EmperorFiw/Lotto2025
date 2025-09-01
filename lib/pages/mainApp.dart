@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:Lotto2025/pages/dashboard.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -10,13 +11,6 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Main App Page'),
-      ),
-      body: const Center(
-        child: Text('Hello, Flutter!'),
-      ),
-    );
+    return const DashboardPage();
   }
 }

@@ -33,9 +33,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     if (isLoadingConfig) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -45,7 +43,9 @@ class _LoginPageState extends State<LoginPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(child: Image.asset('assets/images/logo.png', fit: BoxFit.contain)),
+            Center(
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+            ),
             const SizedBox(height: 20),
             const Center(
               child: Text(
@@ -63,7 +63,9 @@ class _LoginPageState extends State<LoginPage> {
               controller: _usernameController,
               decoration: InputDecoration(
                 labelText: 'ชื่อผู้ใช้',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 prefixIcon: const Icon(Icons.supervised_user_circle_rounded),
               ),
             ),
@@ -79,7 +81,9 @@ class _LoginPageState extends State<LoginPage> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'รหัสผ่าน',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 prefixIcon: const Icon(Icons.lock),
               ),
             ),
@@ -89,7 +93,10 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 TextButton(
                   onPressed: () => register(context),
-                  child: const Text("ลงทะเบียน", style: TextStyle(fontSize: 25)),
+                  child: const Text(
+                    "ลงทะเบียน",
+                    style: TextStyle(fontSize: 25),
+                  ),
                 ),
                 FilledButton(
                   onPressed: apiUrl.isEmpty || isLoggingIn
@@ -100,7 +107,10 @@ class _LoginPageState extends State<LoginPage> {
                           login(username, pass);
                         },
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 8,
+                    ),
                     minimumSize: const Size(0, 0),
                   ),
                   child: isLoggingIn
@@ -109,7 +119,10 @@ class _LoginPageState extends State<LoginPage> {
                           height: 24,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text("เข้าสู่ระบบ", style: TextStyle(fontSize: 25)),
+                      : const Text(
+                          "เข้าสู่ระบบ",
+                          style: TextStyle(fontSize: 25),
+                        ),
                 ),
               ],
             ),
@@ -161,10 +174,7 @@ class _LoginPageState extends State<LoginPage> {
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
+        body: jsonEncode({'username': username, 'password': password}),
       );
 
       final body = response.body;
@@ -204,9 +214,9 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('เข้าสู่ระบบสำเร็จ')));
 
       Navigator.pushReplacement(
         context,
