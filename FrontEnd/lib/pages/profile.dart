@@ -1,50 +1,127 @@
+import 'dart:convert';
+import 'dart:developer';
+
+import 'package:Lotto2025/config/config.dart';
+import 'package:Lotto2025/model/user/user_state.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'claim_lotto.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
-  // JSON จำลอง (เหมือนดึงจาก API)
-  final List<Map<String, dynamic>> mockTickets = const [
-    {
-      "numbers": [1, 2, 3, 4, 5, 6],
-      "set": 1,
-      "status": "ตรวจผล", // "ไม่ถูกรางวัล", "ขึ้นเงิน"
-    },
-    {
-      "numbers": [9, 9, 9, 9, 9, 9],
-      "set": 2,
-      "status": "ไม่ถูกรางวัล",
-    },
-    {
-      "numbers": [5, 6, 7, 8, 9, 0],
-      "set": 3,
-      "status": "ขึ้นเงิน",
-    },
-  ];
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  int money = 0;
+  List<Map<String, dynamic>> tickets = [];
+  bool isLoading = true;
+  String apiEndpoint = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final config = await Configuration.getConfig();
+    apiEndpoint = config['apiEndpoint'] ?? '';
+
+    setState(() => isLoading = true);
+
+    try {
+      final token = UserState().token;
+      if (token == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/user/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['success'] == true) {
+          setState(() {
+            money = int.tryParse(data['user']['money'].toString()) ?? 0;
+            tickets = (data['lottoTickets'] as List<dynamic>? ?? [])
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList();
+          });
+        } else {
+          log('Failed to load profile: ${data['message']}');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data['message'] ?? 'โหลดข้อมูลไม่สำเร็จ')),
+          );
+        }
+      } else {
+        log('HTTP error: ${response.statusCode}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('โหลดข้อมูลไม่สำเร็จ (${response.statusCode})')),
+        );
+      }
+    } catch (e) {
+      log('Error loading profile: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ')),
+      );
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
 
   Color _statusColor(String status) {
     switch (status) {
       case "ตรวจผล":
-        return const Color(0xFF2196F3); // ฟ้า
+        return const Color(0xFF2196F3);
       case "ไม่ถูกรางวัล":
-        return Colors.grey; // เทา
+        return Colors.grey;
       case "ขึ้นเงิน":
-        return Colors.green; // เขียว
+        return Colors.green;
       default:
         return Colors.black54;
     }
   }
 
+  /// ฟังก์ชันนี้แปลงเลขล็อตโต้ให้เป็น List<String> ทีละตัว
+  List<String> _parseNumbers(dynamic numbers) {
+    if (numbers is List && numbers.isNotEmpty) {
+      // backend ส่ง [1,2,3,4,5,6]
+      if (numbers.first is int) {
+        return numbers.map((e) => e.toString()).toList();
+      }
+      // backend ส่ง ["123456"]
+      if (numbers.first is String) {
+        return numbers.first.split('');
+      }
+    }
+    return [];
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: SafeArea(
         child: Column(
           children: [
-            // Header Section - Card Style Design
+            // Header Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
@@ -63,7 +140,6 @@ class ProfilePage extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    // Header แถบสีแดงด้านบน
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(
@@ -84,8 +160,6 @@ class ProfilePage extends StatelessWidget {
                         ),
                       ),
                     ),
-
-                    // ส่วนเนื้อหาด้านล่าง
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -108,25 +182,23 @@ class ProfilePage extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 20),
-
-                          // Balance + Lotto Count
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: const [
+                            children: [
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'เงินคงเหลือ',
                                     style: TextStyle(
                                       color: Colors.black54,
                                       fontSize: 14,
                                     ),
                                   ),
-                                  SizedBox(height: 4),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    '999 บาท',
-                                    style: TextStyle(
+                                    '$money บาท',
+                                    style: const TextStyle(
                                       color: Colors.black87,
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -137,17 +209,17 @@ class ProfilePage extends StatelessWidget {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'จำนวนลอตโต้ทั้งหมด',
                                     style: TextStyle(
                                       color: Colors.black54,
                                       fontSize: 14,
                                     ),
                                   ),
-                                  SizedBox(height: 4),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    '3 ใบ',
-                                    style: TextStyle(
+                                    '${tickets.length} ใบ',
+                                    style: const TextStyle(
                                       color: Colors.black87,
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -165,7 +237,7 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
 
-            // List ลอตเตอรี่ที่คุณมี
+            // List ลอตเตอรี่
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -181,13 +253,13 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // ListView ลอตเตอรี่
                     Expanded(
                       child: ListView.builder(
-                        itemCount: mockTickets.length,
+                        itemCount: tickets.length,
                         itemBuilder: (context, index) {
-                          final ticket = mockTickets[index];
+                          final ticket = tickets[index];
+                          final numbers = _parseNumbers(ticket["numbers"]);
+
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
                             padding: const EdgeInsets.all(16),
@@ -205,13 +277,10 @@ class ProfilePage extends StatelessWidget {
                             ),
                             child: Row(
                               children: [
-                                // เลขลอตเตอรี่
                                 Expanded(
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
+                                        horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFFFCDD2),
                                       borderRadius: BorderRadius.circular(8),
@@ -219,15 +288,13 @@ class ProfilePage extends StatelessWidget {
                                     child: Row(
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceEvenly,
-                                      children:
-                                          List.generate(ticket["numbers"].length,
-                                              (i) {
+                                      children: numbers.map((n) {
                                         return Container(
                                           width: 24,
                                           height: 24,
                                           alignment: Alignment.center,
                                           child: Text(
-                                            '${ticket["numbers"][i]}',
+                                            n,
                                             style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.bold,
@@ -235,13 +302,11 @@ class ProfilePage extends StatelessWidget {
                                             ),
                                           ),
                                         );
-                                      }),
+                                      }).toList(),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-
-                                // ชุดที่
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -264,44 +329,44 @@ class ProfilePage extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(width: 12),
-
-                                // ปุ่มสถานะ
-                               // ปุ่มสถานะ
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (ticket["status"] == "ขึ้นเงิน") {
-                                    // เด้งไปหน้า ClaimLottoPage
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const ClaimLottoPage(),
-                                      ),
-                                    );
-                                  } else {
-                                    // TODO: logic ตรวจผลอื่นๆ
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('สถานะ: ${ticket["status"]}')),
-                                    );
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _statusColor(ticket["status"]),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (ticket["status"] == "ขึ้นเงิน") {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const ClaimLottoPage(),
+                                        ),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'สถานะ: ${ticket["status"]}')),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        _statusColor(ticket["status"]),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 0,
                                   ),
-                                  elevation: 0,
-                                ),
-                                child: Text(
-                                  ticket["status"],
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                  child: Text(
+                                    ticket["status"],
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ),
-                              ),
-
                               ],
                             ),
                           );

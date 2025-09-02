@@ -35,8 +35,8 @@ router.post("/", async (req, res) => {
                 message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
             });
         }
-
-        const token = generateToken({ username: user.username, money: user.money, role: user.role });
+        const money = Number(user.money); 
+        const token = generateToken({ username: user.username, money: money, role: user.role });
 
         return res.status(200).json({
             success: true,
