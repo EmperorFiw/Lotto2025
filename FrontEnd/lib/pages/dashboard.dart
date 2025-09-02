@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'package:Lotto2025/model/user/user_state.dart';
+// import 'package:Lotto2025/model/user/user_model.dart';
 import 'check_prize.dart';
 import 'profile.dart'; // import หน้าโปรไฟล์
 
@@ -37,9 +38,12 @@ class _DashboardPageState extends State<DashboardPage> {
     int selectedCount = selected.where((e) => e).length;
     int totalPrice = selectedCount * 100;
 
+    final user = UserState().currentUser;
+    int wallet = user?.money.toInt() ?? 0; // เมื่อค่าเป็น null = 0
+
     // รวมหน้าทั้งหมด
     final List<Widget> _pages = [
-      _buildHomePage(selectedCount, totalPrice),
+      _buildHomePage(selectedCount, totalPrice, wallet),
       CheckPrize(),
       const ProfilePage(),
     ];
@@ -58,15 +62,9 @@ class _DashboardPageState extends State<DashboardPage> {
             ),
           ),
         ),
-        actions: [
-          IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.menu), onPressed: () {})],
       ),
-      body: Stack(
-        children: [
-          _pages[_currentIndex],
-        ],
-      ),
+      body: Stack(children: [_pages[_currentIndex]]),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         backgroundColor: Colors.red,
@@ -79,23 +77,28 @@ class _DashboardPageState extends State<DashboardPage> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "หน้าแรก"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "ตรวจรางวัล"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "โปรไฟล์"), 
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: "ตรวจรางวัล",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "โปรไฟล์"),
         ],
       ),
     );
   }
 
   // หน้าแรก: เลือกเลขลอตโต้
-  Widget _buildHomePage(int selectedCount, int totalPrice) {
+  Widget _buildHomePage(int selectedCount, int totalPrice, int wallet) {
     return Stack(
       children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 16),
-            const Text("ชุดเลขลอตโต้",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              "ชุดเลขลอตโต้",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Expanded(
               child: ListView.builder(
@@ -103,7 +106,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 itemCount: numbers.length,
                 itemBuilder: (context, index) {
                   return Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     elevation: 2,
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: Padding(
@@ -112,7 +117,10 @@ class _DashboardPageState extends State<DashboardPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.pink.shade50,
                               borderRadius: BorderRadius.circular(6),
@@ -120,7 +128,10 @@ class _DashboardPageState extends State<DashboardPage> {
                             child: Text(
                               numbers[index],
                               style: const TextStyle(
-                                  fontSize: 22, letterSpacing: 6, fontWeight: FontWeight.bold),
+                                fontSize: 22,
+                                letterSpacing: 6,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                           Row(
@@ -129,8 +140,9 @@ class _DashboardPageState extends State<DashboardPage> {
                               const SizedBox(width: 20),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      selected[index] ? Colors.blue.shade900 : Colors.red,
+                                  backgroundColor: selected[index]
+                                      ? Colors.blue.shade900
+                                      : Colors.red,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(6),
                                   ),
@@ -142,7 +154,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                 },
                                 child: Text(
                                   selected[index] ? "เอาออก" : "เลือก",
-                                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                  ),
                                 ),
                               ),
                             ],
@@ -161,20 +176,25 @@ class _DashboardPageState extends State<DashboardPage> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 85,
+            bottom: 1,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 18),
               decoration: BoxDecoration(
                 color: Colors.grey.shade900,
                 boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 3)),
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 6,
+                    offset: Offset(0, 3),
+                  ),
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    "เลือกแล้ว $selectedCount ใบ รวม $totalPrice บาท",
+                    "เลือกแล้ว $selectedCount ใบ รวม $totalPrice บาท\n"
+                    "ยอดเงินคงเหลือ $wallet บาท",
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -186,21 +206,44 @@ class _DashboardPageState extends State<DashboardPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade900,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                     onPressed: () {
                       showDialog(
                         context: context,
                         builder: (_) => AlertDialog(
                           title: const Text("ยืนยันการชำระเงิน"),
-                          content: Text("คุณเลือก $selectedCount ใบ รวม $totalPrice บาท"),
+                          content: Text(
+                            "คุณเลือก $selectedCount ใบ รวม $totalPrice บาท\n"
+                            "ยอดเงินคงเหลือ $wallet บาท",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           actions: [
-                            TextButton(
-                              child: const Text("ยกเลิก"),
+                            ElevatedButton(
+                              child: const Text(
+                                "ยกเลิก",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red,
+                                ),
+                              ),
                               onPressed: () => Navigator.pop(context),
                             ),
                             ElevatedButton(
-                              child: const Text("ชำระเงิน"),
+                              child: const Text(
+                                "ชำระเงิน",
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
+                                ),
+                              ),
                               onPressed: () {
                                 Navigator.pop(context);
                                 // ไปหน้าชำระเงินต่อได้ที่นี่
