@@ -1,16 +1,17 @@
 import bodyParser from "body-parser";
 import express from "express";
 import { jwtAuthen } from "./controller/auth/jwt";
-import { router as loginRouter } from "./controller/auth/login";
+import { router as login } from "./controller/auth/login";
+import { router as register } from "./controller/auth/register";
 import { router as buyLotto } from "./controller/lotto/buy";
 import { router as lotto } from "./controller/lotto/fetch";
 
 export const app = express();
 
 app.use(bodyParser.json());
-app.use(bodyParser.text());
 
-app.use("/auth/login", loginRouter);
+app.use("/auth/login", login);
+app.use("/auth/register", register);
 app.get("/health_check", (req, res) => {
   res.status(200).send("OK");
 });

@@ -1,5 +1,7 @@
 import express from "express";
+import { findUserByUsername, verifyPassword } from "../../models/auth";
 import { generateToken } from "./jwt";
+
 export const router = express.Router();
 
 router.post("/", async (req, res) => {
@@ -16,29 +18,32 @@ router.post("/", async (req, res) => {
             });
         }
 
-        // ตัวอย่าง login แบบ hardcode
-        if (username === "admin" && password === "1234") {
-            const token = generateToken({ username, money: 100000.0, role: "admin" });
+        const user = await findUserByUsername(username);
 
-            return res.status(200).json({
-                success: true,
-                message: "ล็อกอินสำเร็จ",
-                token,
-            });
-        } else if (username === "user" && password === "1234") {
-            const token = generateToken({ username, money: 100000.0, role: "user" });
-
-            return res.status(200).json({
-                success: true,
-                message: "ล็อกอินสำเร็จ",
-                token,
-            });
-        } else {
+        if (!user) {
             return res.status(401).json({
                 success: false,
                 message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
             });
         }
+
+        // ตรวจสอบรหัสผ่านด้วย bcrypt
+        const validPassword = await verifyPassword(password, user.password);
+        if (!validPassword) {
+            return res.status(401).json({
+                success: false,
+                message: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง",
+            });
+        }
+
+        const token = generateToken({ username: user.username, money: user.money, role: user.role });
+
+        return res.status(200).json({
+            success: true,
+            message: "ล็อกอินสำเร็จ",
+            token,
+        });
+
     } catch (error) {
         console.error("เกิดข้อผิดพลาดในการล็อกอิน:", error);
         return res.status(500).json({
