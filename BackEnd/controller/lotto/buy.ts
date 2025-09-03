@@ -1,32 +1,37 @@
 import express from "express";
 import { purchaseLotto } from "../../models/lotto";
+import { jwtAuthen } from "../auth/jwt";
 
 export const router = express.Router();
 
-router.post("/", async (req: any, res) => {
+router.post("/", jwtAuthen, async (req:any, res) => {
     try {
         const username = req.auth?.username;
-        const { numbers } = req.body;
+        const numbers: string[] = req.body.numbers;
 
-        if (!numbers || !Array.isArray(numbers) || numbers.length === 0) {
+        if (!username) {
             return res.status(400).json({
                 success: false,
-                message: "กรุณาส่งเลขล็อตเตอรี่เป็น array",
+                message: "ไม่พบผู้ใช้",
+            });
+        }
+
+        if (!numbers || numbers.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "กรุณาส่งเลขที่จะซื้อ",
             });
         }
 
         const result = await purchaseLotto(username, numbers);
 
-        if (!result.success) {
-            return res.status(400).json(result);
-        }
+        return res.status(200).json(result);
 
-        return res.json(result);
     } catch (error) {
-        console.error("เกิดข้อผิดพลาดในการซื้อล็อตเตอรี่:", error);
+        console.error("ซื้อล็อตเตอรี่ล้มเหลว:", error);
         return res.status(500).json({
             success: false,
-            message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์ กรุณาลองใหม่ภายหลัง",
+            message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
         });
     }
 });

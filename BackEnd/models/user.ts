@@ -11,7 +11,10 @@ export async function fetchProfile(username: string) {
 
 export async function fetchLottoHistory(username: string) {
     const [rows]: any[] = await pool.query(
-        "SELECT * FROM history WHERE username = ?",
+        `SELECT h.hid, h.lotto_number, h.status, u.uid AS user_id, u.money, u.role
+         FROM history h
+         JOIN users u ON h.user_id = u.uid
+         WHERE u.username = ?`,
         [username]
     );
     if (rows.length === 0) return [];

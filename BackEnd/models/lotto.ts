@@ -14,6 +14,41 @@ export async function fetchLotto(): Promise<string[]> {
     }
 }
 
+/**
+ * ฟังก์ชันเช็คเลขถูกรางวัล
+ * @param username ชื่อผู้ใช้
+ * @param number เลขลอตเตอรี่
+ * @param isWin true ถูกรางวัล, false ไม่ถูกรางวัล
+ */
+export async function WonPrize(username: string, number: string, isWin: boolean) {
+    try {
+        if (isWin) {
+            // ถูกรางวัล: update status = 2
+            await pool.query(
+                "UPDATE history SET status = 2 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
+                [number, username]
+            );
+        } else {
+            // ไม่ถูกรางวัล: update status = 1
+            await pool.query(
+                "UPDATE history SET status = 1 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
+                [number, username]
+            );
+        }
+
+        // ดึงเลขทั้งหมดที่ยัง available
+        const [rows] = await pool.query(
+            "SELECT lotto_number FROM lotto WHERE status = ?",
+            ['available']
+        );
+
+        return (rows as any[]).map(row => row.lotto_number);
+    } catch (error) {
+        console.error("เกิดข้อผิดพลาดในการอัปเดต history หรือดึง lotto:", error);
+        return [];
+    }
+}
+
 export async function purchaseLotto(
     username: string,
     numbers: string[]
@@ -23,9 +58,9 @@ export async function purchaseLotto(
     totalPrice: number;
 }> {
     try {
-        // ดึงเงินผู้ใช้
+        // ดึง user_id และเงินผู้ใช้
         const [userRows]: any = await pool.query(
-            "SELECT money FROM users WHERE username = ?",
+            "SELECT uid, money FROM users WHERE username = ?",
             [username]
         );
 
@@ -37,6 +72,7 @@ export async function purchaseLotto(
             };
         }
 
+        const userId = userRows[0].uid;
         const money = userRows[0].money;
         const totalPrice = numbers.length * LOTTO_PRICE;
 
@@ -65,23 +101,23 @@ export async function purchaseLotto(
             };
         }
 
-        // ซื้อทั้งหมด: update status และ owner
+        // ซื้อทั้งหมด: update status
         await pool.query(
             "UPDATE lotto SET status = 'sold' WHERE lotto_number IN (?)",
             [numbers]
         );
 
-        // หักเงิน
+        // หักเงินผู้ใช้
         await pool.query(
-            "UPDATE users SET money = money - ? WHERE username = ?",
-            [totalPrice, username]
+            "UPDATE users SET money = money - ? WHERE uid = ?",
+            [totalPrice, userId]
         );
 
-        // บันทึก history สำหรับแต่ละเลข
+        // บันทึก history สำหรับแต่ละเลข ใช้ user_id แทน username
         for (const lottoNumber of numbers) {
             await pool.query(
-                "INSERT INTO history (lotto_number, username) VALUES (?, ?)",
-                [lottoNumber, username]
+                "INSERT INTO history (lotto_number, user_id) VALUES (?, ?)",
+                [lottoNumber, userId]
             );
         }
 

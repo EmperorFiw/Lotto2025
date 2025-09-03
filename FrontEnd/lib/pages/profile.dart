@@ -112,6 +112,74 @@ class _ProfilePageState extends State<ProfilePage> {
     return lottoNumber.split('');
   }
 
+  Future<void> _checkLotto(String number) async {
+    log("num req");
+    try {
+      final token = UserState().token;
+      if (token == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+      final response = await http.post(
+        Uri.parse("$apiEndpoint/lotto/check_lotto"),
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': 'Bearer $token',
+          },
+        body: jsonEncode({"number": number}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data["success"] == true) {
+          if (!mounted) return;
+          await showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text("ผลการตรวจหวย"),
+              content: Text(data["message"] ?? "ถูกรางวัล!"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("ตกลง"),
+                ),
+              ],
+            ),
+          );
+
+          setState(() {
+            _loadProfile(); // ✅ โหลดข้อมูลโปรไฟล์ใหม่หลังตรวจหวย
+          });
+        } else {
+          if (!mounted) return;
+
+          // แสดง SnackBar 1 วินาที
+          final snackBar = SnackBar(
+            content: Text(data["message"] ?? "ไม่ถูกรางวัล"),
+            duration: const Duration(milliseconds: 500), // ⬅️ 1 วินาที
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+
+          // รีเฟรช profile หลัง SnackBar 1 วินาที
+          Future.delayed(const Duration(milliseconds: 1000), () {
+            if (mounted) {
+              _loadProfile();
+            }
+          });
+
+        }
+
+      } else {
+        throw Exception("Server error");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -321,17 +389,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              const ClaimLottoPage(),
+                                          builder: (context) => const ClaimLottoPage(),
                                         ),
                                       );
                                     } else {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                            content: Text(
-                                                'สถานะ: ${_statusText(status)}')),
-                                      );
+                                     _checkLotto(ticket["lotto_number"].toString()); 
                                     }
                                   },
                                   style: ElevatedButton.styleFrom(
