@@ -6,7 +6,7 @@ import 'package:Lotto2025/config/config.dart';
 import 'package:Lotto2025/model/user/user_state.dart';
 
 import 'check_prize.dart';
-import 'profile.dart'; // import หน้าโปรไฟล์
+import 'profile.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -16,153 +16,164 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  // เก็บ index ของหน้าใน BottomNavigationBar (0 = หน้าแรก)
   int _currentIndex = 0;
 
+  // เก็บ URL ของ API ที่ใช้ดึงข้อมูลและซื้อหวย
   String apiUrl = '';
+  // เก็บชุดตัวเลขลอตเตอรี่ทั้งหมดที่ดึงมาจาก API
   List<String> numbers = [];
+  // เก็บสถานะการเลือกของแต่ละเลข (true = ถูกเลือก, false = ไม่เลือก)
   List<bool> selected = [];
+
+  // ใช้บอกว่าโหลดข้อมูลจาก API อยู่หรือไม่ (true = กำลังโหลด)
   bool isLoading = true;
 
-  // สำหรับค้นหา
+  // สำหรับควบคุม TextField ช่องค้นหา
   TextEditingController searchController = TextEditingController();
-  String searchText = '';
+  String searchText = ''; // เก็บข้อความที่พิมพ์ค้นหา
 
   @override
   void initState() {
+    // เรียก initState ของ parent class เพื่อให้ Flutter เตรียม widget
     super.initState();
-    fetchLotto();
+    fetchLotto(); // ดึงข้อมูลลอตเตอรี่จาก API ทันทีเมื่อเปิดหน้าจอ
   }
 
-  // ฟังก์ชันนี้ใช้สำหรับดึงข้อมูลเลขลอตเตอรี่จาก API
   Future<void> fetchLotto() async {
+    // ฟังก์ชันดึงข้อมูลลอตเตอรี่จาก API
     try {
-      // โหลด config ของ API จากไฟล์ Configuration
+      // โหลดไฟล์ config (เพื่อดู endpoint ของ API)
       final config = await Configuration.getConfig();
 
-      // ดึง endpoint ของ API จาก config (เช่น https://api.lotto2025.com)
+      // อ่านค่า apiEndpoint ถ้าไม่มีให้เป็น ''
       apiUrl = config['apiEndpoint'] ?? '';
 
-      // ดึง JWT token ของผู้ใช้ปัจจุบันจาก UserState
+      // อ่าน token ของ user ปัจจุบันจาก UserState
       final token = UserState().token;
 
-      // ส่ง HTTP GET request ไปยัง API เพื่อดึงเลขลอตเตอรี่
       final response = await http.get(
-        Uri.parse("$apiUrl/lotto/fetchlotto"), // URL ของ API
+        // เรียก API แบบ GET เพื่อนำข้อมูลลอตเตอรี่
+        Uri.parse("$apiUrl/lotto/fetchlotto"), // URL สำหรับเรียก API
+
         headers: {
-          "Authorization": "Bearer $token", // ใส่ JWT สำหรับตรวจสอบสิทธิ์
-          "Content-Type": "application/json", // กำหนดว่าข้อมูลรับส่งเป็น JSON
+          // JWT Token สำหรับยืนยันตัวตน
+          "Authorization": "Bearer $token",
+          // บอกว่าเราส่งและรับข้อมูลเป็น JSON
+          "Content-Type": "application/json",
         },
       );
 
-      // ถ้า HTTP status code = 200 (สำเร็จ)
       if (response.statusCode == 200) {
-        // แปลง JSON response เป็น Map ของ Dart
-        final data = jsonDecode(response.body);
-
-        // ตรวจสอบว่า API ส่งข้อมูลสำเร็จหรือไม่
+        // ถ้า API ตอบกลับด้วย status 200 (สำเร็จ)
+        final data = jsonDecode(
+          response.body,
+        ); // แปลง JSON response เป็น Map ของ Dart
         if (data["success"] == true) {
-          // ถ้า successful → อัปเดต state ของ widget
+          // ถ้า success = true แสดงว่า API ส่งข้อมูลสำเร็จ
           setState(() {
-            // เก็บเลขลอตเตอรี่ทั้งหมดลงใน List<String>
-            numbers = List<String>.from(data["numbers"]);
-
-            // สร้าง List<bool สำหรับ track การเลือกของผู้ใช้ (false = ยังไม่เลือก)
-            selected = List<bool>.filled(numbers.length, false);
-
-            // ปิด loading indicator
-            isLoading = false;
+            // อัปเดต UI
+            numbers = List<String>.from(
+              data["numbers"],
+            ); // เก็บชุดตัวเลขลอตเตอรี่ทั้งหมด
+            selected = List<bool>.filled(
+              numbers.length,
+              false,
+            ); // ตั้งค่าเลือก = false ทุกใบ
+            isLoading = false; // ปิดสถานะการโหลด
           });
         }
       } else {
-        // ถ้า HTTP status code ไม่ใช่ 200 → log error
-        log("Error fetching lotto: ${response.statusCode}");
-
-        // ปิด loading indicator
-        setState(() => isLoading = false);
+        log(
+          "Error fetching lotto: ${response.statusCode}",
+        ); // ถ้า status code != 200 ให้ log error
+        setState(() => isLoading = false); // ปิดสถานะการโหลดแม้จะ error
       }
     } catch (e) {
-      // ถ้ามี exception เกิดขึ้น เช่น network error
-      log("Fetch lotto failed: $e");
-
-      // ปิด loading indicator
-      setState(() => isLoading = false);
+      // ถ้าเกิด error เช่น network ล่ม
+      log("Fetch lotto failed: $e"); // log ข้อผิดพลาด
+      setState(() => isLoading = false); // ปิดสถานะการโหลด
     }
   }
 
-  // ฟังก์ชันนี้ใช้สำหรับซื้อเลขลอตเตอรี่ที่ผู้ใช้เลือก
   Future<void> buySelectedTickets(List<String> selectedNumbers) async {
-    // ดึง JWT token ของผู้ใช้
-    final token = UserState().token;
+    // ฟังก์ชันซื้อเลขที่เลือกไว้
+    final token = UserState().token; // ดึง token ของ user
 
-    // ตรวจสอบเบื้องต้น ถ้าไม่มี API URL, ไม่มี token, หรือไม่เลือกเลข → ออกจากฟังก์ชันทันที
+    // ถ้า API URL ว่าง, token ไม่มี หรือไม่เลือกเลขอะไรเลย ให้หยุดฟังก์ชัน
     if (apiUrl.isEmpty || token == null || selectedNumbers.isEmpty) return;
 
     try {
-      // ส่ง HTTP POST request ไปยัง API /lotto/buy เพื่อทำการซื้อ
       final response = await http.post(
-        Uri.parse('$apiUrl/lotto/buy'), // URL ของ API
+        // เรียก API แบบ POST เพื่อทำการซื้อ
+        Uri.parse('$apiUrl/lotto/buy'), // URL สำหรับซื้อ
         headers: {
-          "Authorization": "Bearer $token", // ใส่ JWT สำหรับตรวจสอบสิทธิ์
-          "Content-Type": "application/json", // กำหนดว่า request body เป็น JSON
+          "Authorization": "Bearer $token",
+          "Content-Type": "application/json",
         },
-        // body ของ POST request เป็น JSON array ของเลขที่ผู้ใช้เลือก
+        // ส่งตัวเลขที่เลือกไปเป็น JSON
         body: jsonEncode({"numbers": selectedNumbers}),
       );
 
-      // ถ้า HTTP status code ไม่ใช่ 200 → แสดง error
       if (response.statusCode != 200) {
+        // ถ้า API ตอบกลับไม่ใช่ 200 แสดงว่ามี error
         log('HTTP error: ${response.statusCode}');
+        // แจ้งเตือน error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('ซื้อไม่สำเร็จ (${response.statusCode})')),
         );
-        return;
+        return; // ออกจากฟังก์ชัน
       }
 
-      // แปลง JSON response เป็น Map
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body); // แปลง JSON เป็น Map
 
-      // ตรวจสอบว่า API ตอบว่าซื้อสำเร็จหรือไม่
       if (data['success'] == true) {
-        // ถ้าผู้ใช้มีข้อมูลใน UserState ให้ปรับยอดเงิน
-        final user = UserState().currentUser;
+        // ถ้าซื้อสำเร็จ
+        final user = UserState().currentUser; // อ่านข้อมูล user ปัจจุบัน
         if (user != null) {
-          // ดึง totalPrice จาก response → แปลงเป็น int ให้แน่นอน
+          // อ่านราคาที่ซื้อจาก API
           final priceRaw = data['totalPrice'] ?? 0;
+          // ถ้าราคาเป็น int = priceNum เลย
           final priceNum = priceRaw is int
               ? priceRaw
+              // ถ้าเป็น double ให้แปลงเป็น int
               : (priceRaw is double
                     ? priceRaw.toInt()
+                    // ถ้าเป็น string ให้แปลงเป็น int หรือ = 0
                     : int.tryParse(priceRaw.toString()) ?? 0);
 
-          // คำนวณยอดเงินใหม่ = เงินเดิม - ราคาซื้อ
-          final newMoney = user.money - priceNum;
-
-          // อัปเดตยอดเงินใน UserState
-          UserState().updateMoney(newMoney);
+          final newMoney = user.money - priceNum; // หักเงินจากยอดเงินปัจจุบัน
+          UserState().updateMoney(newMoney); // อัปเดตเงินใหม่ใน UserState
         }
 
-        // แจ้งผู้ใช้ว่าซื้อสำเร็จ
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? "ซื้อสำเร็จ")),
-        );
-
-        // ล้างการเลือกเลขทั้งหมดใน List
+        // ลบเลขที่ซื้อออกจาก list ทันที
         setState(() {
-          selected = List<bool>.filled(numbers.length, false);
+          numbers.removeWhere(
+            (num) => selectedNumbers.contains(num),
+          ); // เอาเลขที่ซื้อออกจาก list
+          selected = List<bool>.filled(numbers.length, false); // รีเซ็ตการเลือก
         });
-      } else {
-        // ถ้า API ตอบว่าซื้อไม่สำเร็จ → แสดง message
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(data['message'] ?? "ซื้อไม่สำเร็จ")),
+          SnackBar(
+            content: Text(data['message'] ?? "ซื้อสำเร็จ"),
+          ), // แจ้งเตือนสำเร็จ
+        );
+      } else {
+        // ถ้าซื้อไม่สำเร็จ
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(data['message'] ?? "ซื้อไม่สำเร็จ"),
+          ), // แจ้งเตือน error
         );
       }
     } catch (e) {
-      // ถ้าเกิด exception เช่น network error
-      log('Network error: $e');
-
-      // แจ้งผู้ใช้ว่าเกิดข้อผิดพลาด
+      // ถ้า network error
+      log('Network error: $e'); // log error
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ')),
+        const SnackBar(
+          content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ'),
+        ), // แจ้งเตือน error
       );
     }
   }
@@ -246,7 +257,6 @@ class _DashboardPageState extends State<DashboardPage> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const SizedBox(height: 16),
-                // ช่องค้นหา
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TextField(
