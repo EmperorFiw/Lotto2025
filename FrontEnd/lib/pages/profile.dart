@@ -80,32 +80,36 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Color _statusColor(String status) {
+  Color _statusColor(int status) {
     switch (status) {
-      case "ตรวจผล":
+      case 0: // ตรวจผล
         return const Color(0xFF2196F3);
-      case "ไม่ถูกรางวัล":
+      case 1: // ไม่ถูกรางวัล
         return Colors.grey;
-      case "ขึ้นเงิน":
+      case 2: // ขึ้นเงิน
         return Colors.green;
       default:
         return Colors.black54;
     }
   }
 
-  /// ฟังก์ชันนี้แปลงเลขล็อตโต้ให้เป็น List<String> ทีละตัว
-  List<String> _parseNumbers(dynamic numbers) {
-    if (numbers is List && numbers.isNotEmpty) {
-      // backend ส่ง [1,2,3,4,5,6]
-      if (numbers.first is int) {
-        return numbers.map((e) => e.toString()).toList();
-      }
-      // backend ส่ง ["123456"]
-      if (numbers.first is String) {
-        return numbers.first.split('');
-      }
+  String _statusText(int status) {
+    switch (status) {
+      case 0:
+        return "ตรวจผล";
+      case 1:
+        return "ไม่ถูกรางวัล";
+      case 2:
+        return "ขึ้นเงิน";
+      default:
+        return "ไม่ทราบสถานะ";
     }
-    return [];
+  }
+
+  /// ฟังก์ชันนี้แปลง string lotto_number → List<String>
+  List<String> _parseLottoNumber(String? lottoNumber) {
+    if (lottoNumber == null || lottoNumber.isEmpty) return [];
+    return lottoNumber.split('');
   }
 
   @override
@@ -258,7 +262,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         itemCount: tickets.length,
                         itemBuilder: (context, index) {
                           final ticket = tickets[index];
-                          final numbers = _parseNumbers(ticket["numbers"]);
+                          final numbers =
+                              _parseLottoNumber(ticket["lotto_number"]);
+                          final status = ticket["status"] is int
+                              ? ticket["status"] as int
+                              : int.tryParse(ticket["status"].toString()) ?? 0;
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
@@ -307,31 +315,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'ชุดที่',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    Text(
-                                      '${ticket["set"]}',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(width: 12),
                                 ElevatedButton(
                                   onPressed: () {
-                                    if (ticket["status"] == "ขึ้นเงิน") {
+                                    if (status == 2) {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -344,13 +330,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                           .showSnackBar(
                                         SnackBar(
                                             content: Text(
-                                                'สถานะ: ${ticket["status"]}')),
+                                                'สถานะ: ${_statusText(status)}')),
                                       );
                                     }
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        _statusColor(ticket["status"]),
+                                    backgroundColor: _statusColor(status),
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 16, vertical: 8),
@@ -360,7 +345,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     elevation: 0,
                                   ),
                                   child: Text(
-                                    ticket["status"],
+                                    _statusText(status),
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
