@@ -146,12 +146,9 @@ class _DashboardPageState extends State<DashboardPage> {
           UserState().updateMoney(newMoney); // อัปเดตเงินใหม่ใน UserState
         }
 
-        // ลบเลขที่ซื้อออกจาก list ทันที
         setState(() {
-          numbers.removeWhere(
-            (num) => selectedNumbers.contains(num),
-          ); // เอาเลขที่ซื้อออกจาก list
-          selected = List<bool>.filled(numbers.length, false); // รีเซ็ตการเลือก
+          numbers.removeWhere((num) => selectedNumbers.contains(num));
+          selected = List<bool>.filled(numbers.length, false);
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
