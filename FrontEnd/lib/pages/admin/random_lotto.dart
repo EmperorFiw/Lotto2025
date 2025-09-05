@@ -1,9 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-void main() {
-  runApp(RandomLottoPage());
-}
+
 class RandomLottoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

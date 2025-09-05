@@ -37,6 +37,9 @@ class UserState {
     );
   }
 
+  bool get isAdmin {
+    return currentUser?.role.toLowerCase() == 'admin';
+  }
   // อัพเดทยอดเงิน user
   void updateMoney(int newMoney) {
     if (currentUser != null) {
@@ -49,8 +52,8 @@ class UserState {
     }
   }
 
-  // ล้างข้อมูล user และ token
-  Future<void> clear() async {
+  // logout
+  Future<void> logout() async {
     _token = null;
     currentUser = null;
     await clearTokenFromStorage();

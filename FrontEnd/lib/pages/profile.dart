@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:Lotto2025/config/config.dart';
 import 'package:Lotto2025/model/user/user_state.dart';
+import 'package:Lotto2025/pages/login.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -258,9 +259,13 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               const SizedBox(height: 16),
                               GestureDetector(
-                                onTap: () {
-                                  // ใส่ฟังก์ชันออกจากระบบตรงนี้
-                                  print('ออกจากระบบ');
+                                onTap: () async {
+                                  await UserState().logout();
+                                  // กลับไปหน้า login
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                                  );
                                 },
                                 child: const Text(
                                   'ออกจากระบบ',
@@ -270,7 +275,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ),
+                              )
+
                             ],
                           ),
    

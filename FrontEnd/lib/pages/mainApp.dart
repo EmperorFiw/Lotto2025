@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
+import 'package:Lotto2025/model/user/user_state.dart';
+import 'package:Lotto2025/pages/admin/admin_dashboard.dart';
 import 'package:Lotto2025/pages/dashboard.dart';
+import 'package:flutter/material.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -11,6 +13,12 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
-    return const DashboardPage();
+    final user = UserState().currentUser;
+
+    if (UserState().isAdmin) {
+      return const AdminDashboardPage();
+    } else {
+      return const DashboardPage();
+    }
   }
 }
