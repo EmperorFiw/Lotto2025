@@ -17,7 +17,7 @@ router.post("/", async (req: any, res) => {
 
         // ตรวจสอบเลขจากตาราง lotto_results
         const [rows]: any = await pool.query(
-            "SELECT prize_name, prize_amount FROM lotto_results WHERE number = ?",
+            "SELECT prize_name, prize_amount FROM lotto_results WHERE lotto_number = ?",
             [number]
         );
 
