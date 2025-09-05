@@ -389,15 +389,16 @@ class _CheckPrizeState extends State<CheckPrize> {
                   ),
                   const SizedBox(height: 12),
                   _buildPrizeCard(
-                    'รางวัลที่ 4',
+                    'รางวัลเลขสามตัวท้าย (ของรางวัลที่1)',
                     'รางวัลละ 40,000 บาท',
-                    '999999',
+                    '999',
                   ),
+
                   const SizedBox(height: 12),
                   _buildPrizeCard(
-                    'รางวัลที่ 5',
+                    'รางวัลสองตัวท้าย (รางวัลทั่วไป)',
                     'รางวัลละ 20,000 บาท',
-                    '999999',
+                    '99',
                   ),
                 ],
               ),
@@ -438,27 +439,42 @@ class _CheckPrizeState extends State<CheckPrize> {
               ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  prizeTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    prizeTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    maxLines: 2,
                   ),
                 ),
-                Text(
-                  prizeAmount,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 1,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      prizeAmount,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           // หมายเลขรางวัล
           Container(
             width: double.infinity,
