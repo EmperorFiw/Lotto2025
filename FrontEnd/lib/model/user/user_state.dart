@@ -33,12 +33,12 @@ class UserState {
       username: payload['username'] ?? '',
       phone: payload['phone'] ?? '',
       role: payload['role'] ?? '',
-      money: double.tryParse(payload['money'].toString()) ?? 0.0,
+      money: int.tryParse(payload['money'].toString()) ?? 0,
     );
   }
 
   // อัพเดทยอดเงิน user
-  void updateMoney(double newMoney) {
+  void updateMoney(int newMoney) {
     if (currentUser != null) {
       currentUser = UserModel(
         username: currentUser!.username,

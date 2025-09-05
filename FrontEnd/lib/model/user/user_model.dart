@@ -1,7 +1,7 @@
 class UserModel {
   String username;
   String phone;
-  double money;
+  int money;
   String role;
 
   UserModel({
