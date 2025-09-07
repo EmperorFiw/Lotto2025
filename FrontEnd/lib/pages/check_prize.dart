@@ -207,6 +207,21 @@ class _CheckPrizeState extends State<CheckPrize> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.red,
+        title: const Text("LOTTO 2025"),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: ClipOval(
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+            ),
+          ),
+        ),
+        //actions: [IconButton(icon: const Icon(Icons.menu), onPressed: () {})],
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -374,15 +389,16 @@ class _CheckPrizeState extends State<CheckPrize> {
                   ),
                   const SizedBox(height: 12),
                   _buildPrizeCard(
-                    'รางวัลที่ 4',
+                    'รางวัลเลขสามตัวท้าย (ของรางวัลที่1)',
                     'รางวัลละ 40,000 บาท',
-                    '999999',
+                    '999',
                   ),
+
                   const SizedBox(height: 12),
                   _buildPrizeCard(
-                    'รางวัลที่ 5',
+                    'รางวัลสองตัวท้าย (รางวัลทั่วไป)',
                     'รางวัลละ 20,000 บาท',
-                    '999999',
+                    '99',
                   ),
                 ],
               ),
@@ -423,27 +439,42 @@ class _CheckPrizeState extends State<CheckPrize> {
               ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  prizeTitle,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                    prizeTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    maxLines: 2,
                   ),
                 ),
-                Text(
-                  prizeAmount,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 1,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      prizeAmount,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           // หมายเลขรางวัล
           Container(
             width: double.infinity,
