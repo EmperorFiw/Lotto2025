@@ -13,8 +13,6 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
-    final user = UserState().currentUser;
-
     if (UserState().isAdmin) {
       return const AdminDashboardPage();
     } else {

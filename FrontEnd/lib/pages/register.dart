@@ -61,7 +61,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final phone = _phoneController.text.trim();
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
-    final money = double.tryParse(_moneyController.text.trim()) ?? 0.0;
+    final money = int.tryParse(_moneyController.text.trim()) ?? 0;
 
     if (phone.isEmpty || username.isEmpty || password.isEmpty || money <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
