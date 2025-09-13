@@ -20,33 +20,50 @@ export async function fetchLotto(): Promise<string[]> {
  * @param number เลขลอตเตอรี่
  * @param isWin true ถูกรางวัล, false ไม่ถูกรางวัล
  */
-export async function WonPrize(username: string, number: string, isWin: boolean) {
-    try {
-        if (isWin) {
-            // ถูกรางวัล: update status = 2
-            await pool.query(
-                "UPDATE history SET status = 2 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
-                [number, username]
-            );
-        } else {
-            // ไม่ถูกรางวัล: update status = 1
-            await pool.query(
-                "UPDATE history SET status = 1 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
-                [number, username]
-            );
-        }
 
-        // ดึงเลขทั้งหมดที่ยัง available
-        const [rows] = await pool.query(
-            "SELECT lotto_number FROM lotto WHERE status = ?",
-            ['available']
+export async function WonPrize(
+  username: string,
+  number: string,
+  isWin: boolean
+): Promise<{ message: string }> {
+  try {
+    // ตรวจว่า user มี history ของเลขนี้หรือไม่
+    const [rows]: any = await pool.query(
+      "SELECT id FROM history WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
+      [number, username]
+    );
+
+    if (isWin) {
+      if (rows.length > 0) {
+        // เคยซื้อ อัปเดต status = 2 
+        //TODO:::::::: testing
+        // await pool.query(
+        //   "UPDATE history SET status = 2 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
+        //   [number, username]
+        // );
+        return {
+          message: "คุณถูกรางวัล กรุณาขึ้นเงินที่หน้าโปรไฟล์",
+        };
+      } else {
+        // ไม่เคยซื้อ → ไม่อัปเดต status
+        return {
+          message: "คุณถูกรางวัล แต่ไม่อัปเดตเพราะไม่เคยซื้อ",
+        };
+      }
+    } else {
+      if (rows.length > 0) {
+        // ไม่ถูกรางวัล → อัปเดต status = 1
+        await pool.query(
+          "UPDATE history SET status = 1 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
+          [number, username]
         );
-
-        return (rows as any[]).map(row => row.lotto_number);
-    } catch (error) {
-        console.error("เกิดข้อผิดพลาดในการอัปเดต history หรือดึง lotto:", error);
-        return [];
+      }
+      return { message: "เลขนี้ไม่ถูกรางวัล" };
     }
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาดในการอัปเดต history:", error);
+    return { message: "เกิดข้อผิดพลาดในการตรวจลอตเตอรี่" };
+  }
 }
 
 export async function purchaseLotto(
@@ -102,10 +119,11 @@ export async function purchaseLotto(
         }
 
         // ซื้อทั้งหมด: update status
-        await pool.query(
-            "UPDATE lotto SET status = 'sold' WHERE lotto_number IN (?)",
-            [numbers]
-        );
+        //TODO:::
+        // await pool.query(
+        //     "UPDATE lotto SET status = 'sold' WHERE lotto_number IN (?)",
+        //     [numbers]
+        // );
 
         // หักเงินผู้ใช้
         await pool.query(

@@ -7,8 +7,6 @@ import 'package:Lotto2025/pages/login.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-import 'claim_lotto.dart';
-
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -89,6 +87,8 @@ class _ProfilePageState extends State<ProfilePage> {
         return Colors.grey;
       case 2: // ขึ้นเงิน
         return Colors.green;
+      case 3: // ขึ้นเงินสำดร็จ
+        return Colors.green;
       default:
         return Colors.black54;
     }
@@ -102,6 +102,8 @@ class _ProfilePageState extends State<ProfilePage> {
         return "ไม่ถูกรางวัล";
       case 2:
         return "ขึ้นเงิน";
+      case 3:
+        return "ขึ้นเงินสำเร็จ";
       default:
         return "ไม่ทราบสถานะ";
     }
@@ -112,7 +114,6 @@ class _ProfilePageState extends State<ProfilePage> {
     if (lottoNumber == null || lottoNumber.isEmpty) return [];
     return lottoNumber.split('');
   }
-
   Future<void> _checkLotto(String number) async {
     log("num req");
     try {
@@ -121,24 +122,98 @@ class _ProfilePageState extends State<ProfilePage> {
         setState(() => isLoading = false);
         return;
       }
+
       final response = await http.post(
         Uri.parse("$apiEndpoint/lotto/check_lotto"),
         headers: {
           "Content-Type": "application/json",
           'Authorization': 'Bearer $token',
-          },
+        },
         body: jsonEncode({"number": number}),
       );
+
+      if (response.statusCode != 200) {
+        throw Exception("Server error: ${response.statusCode}");
+      }
+
+      final data = jsonDecode(response.body);
+      if (!mounted) return;
+
+      final bool isWon = data["success"] == true;
+      // แสดง Dialog แจ้งผล
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Center(
+            child: Text(
+              isWon ? "🎉 ยินดีด้วย!" : "😞 เสียใจ",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          content: Text(
+            isWon
+                ? "เลข $number ถูกรางวัล\nกรุณาไปกดขึ้นเงินเพื่อรับรางวัล"
+                : "เลข $number ไม่ถูกรางวัล",
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("ตกลง"),
+            ),
+          ],
+        ),
+      );
+
+      // รีเฟรช tickets หลังตรวจ
+      _loadProfile();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    }
+  }
+
+  Future<void> _claimLotto(String number) async {
+    try {
+      final token = UserState().token;
+      if (token == null) return;
+
+      final response = await http.post(
+        Uri.parse("$apiEndpoint/lotto/claim"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({"number": number}),
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
         if (data["success"] == true) {
           if (!mounted) return;
+
+          // แปลง prize เป็น int ให้ชัวร์
+          final int prizeAmount = (data["prize"] ?? 0).toInt();
+
+          // อัปเดตเงินใน UserState
+          if (UserState().currentUser != null) {
+            UserState().updateMoney(UserState().money + prizeAmount);
+          }
+
+          // รีเฟรช money ในหน้า Profile
+          setState(() {
+            money = UserState().money;
+          });
+
+          // แสดง Dialog
           await showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text("ผลการตรวจหวย"),
-              content: Text(data["message"] ?? "ถูกรางวัล!"),
+              title: const Text("🎉 รับเงินเรียบร้อย"),
+              content: Text("คุณได้รับเงินจำนวน $prizeAmount บาท"),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -148,30 +223,16 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           );
 
-          setState(() {
-            _loadProfile(); // ✅ โหลดข้อมูลโปรไฟล์ใหม่หลังตรวจหวย
-          });
+          // โหลด profile ใหม่เพื่อรีเฟรช tickets
+          _loadProfile();
         } else {
           if (!mounted) return;
-
-          // แสดง SnackBar 1 วินาที
-          final snackBar = SnackBar(
-            content: Text(data["message"] ?? "ไม่ถูกรางวัล"),
-            duration: const Duration(milliseconds: 500), // ⬅️ 1 วินาที
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data["message"] ?? "ขึ้นเงินไม่สำเร็จ")),
           );
-          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
-          // รีเฟรช profile หลัง SnackBar 1 วินาที
-          Future.delayed(const Duration(milliseconds: 1000), () {
-            if (mounted) {
-              _loadProfile();
-            }
-          });
-
         }
-
       } else {
-        throw Exception("Server error");
+        throw Exception("Server error: ${response.statusCode}");
       }
     } catch (e) {
       if (!mounted) return;
@@ -180,6 +241,7 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -415,21 +477,25 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ElevatedButton(
                                   onPressed: () {
                                     if (status == 2) {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => const ClaimLottoPage(),
-                                        ),
-                                      );
-                                    } else {
-                                     _checkLotto(ticket["lotto_number"].toString()); 
-                                    }
+                                        // ถูกรางวัล → ขึ้นเงิน
+                                        _claimLotto(ticket["lotto_number"].toString());
+                                      } else if (status == 0) {
+                                        // ตรวจผล → ตรวจสอบเลข
+                                        _checkLotto(ticket["lotto_number"].toString());
+                                      } else {
+                                        // status อื่น ๆ (เช่น 1) → แจ้งเตือนสถานะ
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text("สถานะปัจจุบันคือ: ${_statusText(status)}"),
+                                            duration: const Duration(seconds: 1),
+                                          ),
+                                        );
+                                      }
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: _statusColor(status),
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(8),
                                     ),
@@ -443,6 +509,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                   ),
                                 ),
+
                               ],
                             ),
                           );

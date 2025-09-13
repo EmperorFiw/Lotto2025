@@ -2,7 +2,6 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'user_model.dart';
-
 class UserState {
   static final UserState _instance = UserState._internal();
 
@@ -26,6 +25,9 @@ class UserState {
     }
   }
 
+  // getter ยอดเงิน
+  int get money => currentUser?.money ?? 0;
+
   // ฟังก์ชัน decode token แล้วสร้าง UserModel
   void _decodeAndSetUser(String jwtToken) {
     Map<String, dynamic> payload = JwtDecoder.decode(jwtToken);
@@ -40,6 +42,7 @@ class UserState {
   bool get isAdmin {
     return currentUser?.role.toLowerCase() == 'admin';
   }
+
   // อัพเดทยอดเงิน user
   void updateMoney(int newMoney) {
     if (currentUser != null) {
