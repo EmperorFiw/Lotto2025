@@ -152,7 +152,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           content: Text(
             isWon
-                ? "เลข $number ถูกรางวัล\nกรุณาไปกดขึ้นเงินเพื่อรับรางวัล"
+                ? "เลข $number ถูกรางวัล\nกดขึ้นเงินเพื่อรับรางวัล"
                 : "เลข $number ไม่ถูกรางวัล",
             textAlign: TextAlign.center,
           ),

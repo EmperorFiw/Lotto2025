@@ -16,37 +16,36 @@ router.post("/", async (req: any, res) => {
 			});
 		}
 
-		// find number in lotto_results
+		// find number in sql
 		const [rows]: any = await pool.query(
-			"SELECT prize_name, prize_amount FROM lotto_results WHERE lotto_number = ?",
+			"SELECT id, prize_name, prize_amount FROM lotto_results WHERE lotto_number = ?",
 			[number]
-		);
+		  );
+		  
 
 		if (rows.length > 0) {
 			const prize = rows[0];
-			// call model WonPrize → คืน message
-			const result = await WonPrize(username, number, true);
+			// if is won
+			const message = await WonPrize(username, number, true);
 
 			return res.status(200).json({
 				success: true,
-				message: result.message, // ส่งข้อความตามเงื่อนไข
-				prizeName: prize.prize_name,
-				prizeAmount: prize.prize_amount
+				message: message,
 			});
 		} else {
-			// call model WonPrize สำหรับเลขไม่ถูกรางวัล
-			const result = await WonPrize(username, number, false);
+			//not won
+			const message = await WonPrize(username, number, false);
 
 			return res.status(200).json({
 				success: false,
-				message: result.message,
+				message: message,
 			});
 		}
 	} catch (error) {
 		console.error("เกิดข้อผิดพลาดในการตรวจลอตเตอรี่:", error);
 		return res.status(500).json({
 			success: false,
-			message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์ กรุณาลองใหม่ภายหลัง",
+			message: "Internal Server Error!",
 		});
 	}
 });
