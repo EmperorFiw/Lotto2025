@@ -207,21 +207,6 @@ class _CheckPrizeState extends State<CheckPrize> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.red,
-        title: const Text("LOTTO 2025"),
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: ClipOval(
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
-            ),
-          ),
-        ),
-        //actions: [IconButton(icon: const Icon(Icons.menu), onPressed: () {})],
-      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),

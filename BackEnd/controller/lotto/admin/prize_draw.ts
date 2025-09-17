@@ -1,14 +1,22 @@
 import express from "express";
-import { createLottoResults, fetchLotto, hasBeenDrawn } from "../../models/lotto";
+import { createLottoResults, fetchLotto, hasBeenDrawn } from "../../../models/lotto";
 export const router = express.Router();
 
-router.post("/", async (req, res) => {
+router.post("/", async (req: any, res) => {
     try {
+        const permission: string = req?.auth.role;
+        if (permission !== "admin") 
+        {
+            return res.status(403).json({
+                success: false,
+                message: "Forbidden"
+            });
+        }
         const type = req?.body?.prize_draw_type;
         if (!type) {
             return res.status(400).json({
                 success: false,
-                message: "Missing required field prize_draw_type"
+                message: "Bad Requests"
             });
         }
 

@@ -14,7 +14,7 @@ export async function fetchLottoHistory(username: string) {
         `SELECT h.hid, h.lotto_number, h.status, u.uid AS user_id, u.money, u.role
          FROM history h
          JOIN users u ON h.user_id = u.uid
-         WHERE u.username = ?`,
+         WHERE u.username = ? ORDER BY h.status ASC`,
         [username]
     );
     if (rows.length === 0) return [];

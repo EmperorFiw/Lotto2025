@@ -21,7 +21,7 @@ export async function fetchLotto(type: string = "available"): Promise<string[]> 
       const params: any[] = [];
 
       if (type !== "all") {
-          sql += " WHERE status = ?";
+          sql += " WHERE status = ? ORDER BY lotto_number";
           params.push(type);
       }
 
