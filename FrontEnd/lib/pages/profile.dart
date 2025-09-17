@@ -109,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  /// ฟังก์ชันนี้แปลง string lotto_number → List<String>
+  /// ฟังก์ชันนี้แปลง string lotto_number  List<String>
   List<String> _parseLottoNumber(String? lottoNumber) {
     if (lottoNumber == null || lottoNumber.isEmpty) return [];
     return lottoNumber.split('');
@@ -140,6 +140,7 @@ class _ProfilePageState extends State<ProfilePage> {
       if (!mounted) return;
 
       final bool isWon = data["success"] == true;
+      final String msg = data["message"];
       // แสดง Dialog แจ้งผล
       await showDialog(
         context: context,
@@ -152,8 +153,8 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           content: Text(
             isWon
-                ? "เลข $number ถูกรางวัล\nกดขึ้นเงินเพื่อรับรางวัล"
-                : "เลข $number ไม่ถูกรางวัล",
+                ? "$msg\nกดขึ้นเงินเพื่อรับรางวัล"
+                : "$msg",
             textAlign: TextAlign.center,
           ),
           actions: [

@@ -2,12 +2,14 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+void main() {
+  runApp(RandomLottoPage());
+}
+
 class RandomLottoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: RandomLottoPC(),
-    );
+    return MaterialApp(home: RandomLottoPC());
   }
 }
 
@@ -38,6 +40,26 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Color(0xFFDC3545),
+        elevation: 0,
+        leading: Container(
+          margin: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(Icons.apps, color: Color(0xFF4CAF50), size: 24),
+        ),
+        title: Text(
+          'InwzaLotto',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -63,7 +85,6 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -75,22 +96,9 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
                             color: Colors.black87,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: resetNumbers,
-                          child: Text(
-                            'รีเซ็ทระบบ',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     SizedBox(height: 12),
-
                     Text(
                       'กดปุ่มเพื่อสุ่มตัวเลขการออกรางวัล',
                       style: TextStyle(
@@ -100,65 +108,101 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
                       ),
                     ),
                     SizedBox(height: 20),
-
-                    // Number Display
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: currentNumbers.map((number) {
-                        return Container(
-                          width: 45,
-                          height: 45,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              number,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFFFB3BA), // สีแดงอ่อน/ชมพูอ่อน
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: currentNumbers.map((number) {
+                          return Container(
+                            width: 35,
+                            height: 35,
+                            child: Center(
+                              child: Text(
+                                number,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                    // Random + Second Button
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: generateRandomNumbers,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFFDC3545),
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Text(
+                                'สุ่มออกรางวัลลอตโต้ที่ขายไปแล้ว',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                                softWrap: true,
                               ),
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: 24),
-
-                    // Random Button (อยู่ตรงกลาง)
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: generateRandomNumbers,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFFDC3545),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 32,
-                            vertical: 12,
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: generateRandomNumbers,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFFDC3545),
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: Text(
+                                'สุ่มออกรางวัลสุ่มออกรางวัลลอตโต้ทั้งหมด',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                                softWrap: true,
+                              ),
+                            ),
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          'สุ่มออกรางวัล',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
               SizedBox(height: 24),
-
-              // Prize List Section
               Column(
                 children: [
                   _buildPrizeCard(
@@ -179,17 +223,9 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
                     '999999',
                   ),
                   SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลที่ 4',
-                    'รางวัลละ 40,000 บาท',
-                    '999999',
-                  ),
+                  _buildPrizeCard('รางวัลที่ 4', 'รางวัลละ 40,000 บาท', '999'),
                   SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลที่ 5',
-                    'รางวัลละ 20,000 บาท',
-                    '999999',
-                  ),
+                  _buildPrizeCard('รางวัลที่ 5', 'รางวัลละ 20,000 บาท', '99'),
                 ],
               ),
             ],
@@ -197,6 +233,19 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
         ),
       ),
 
+      // Bottom Navigation Bar (ไม่มีความโค้งมน)
+      bottomNavigationBar: Container(
+        height: 70,
+        color: Color(0xFFDC3545), // ไม่มี borderRadius
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildNavItem(Icons.home, 'หน้าแรก', true),
+            _buildNavItem(Icons.refresh, 'รีเซ็ทระบบ', false),
+            _buildNavItem(Icons.person, 'แอดมิน', false),
+          ],
+        ),
+      ),
     );
   }
 
@@ -217,7 +266,6 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
       ),
       child: Column(
         children: [
-          // Prize Header
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -250,8 +298,6 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
               ],
             ),
           ),
-
-          // Prize Number
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(vertical: 16),
@@ -269,6 +315,23 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, bool isActive) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, color: isActive ? Colors.white : Colors.white70),
+        SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.white70,
+            fontSize: 12,
+          ),
+        ),
+      ],
     );
   }
 }
