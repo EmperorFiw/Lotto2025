@@ -1,21 +1,102 @@
+import 'package:Lotto2025/pages/admin/random_lotto.dart';
+import 'package:Lotto2025/pages/admin/reset.dart';
 import 'package:flutter/material.dart';
 
-class AdminDashboardPage extends StatelessWidget {
-  const AdminDashboardPage({super.key});
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'InwzaLotto',
+      debugShowCheckedModeBanner: false,
+      home: AdminDashboardPage(),
+    );
+  }
+}
+
+class AdminDashboardPage extends StatefulWidget {
+  @override
+  _AdminDashboardPageState createState() => _AdminDashboardPageState();
+}
+
+class _AdminDashboardPageState extends State<AdminDashboardPage> {
+  int _currentIndex = 0;
+
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      RandomLottoPage(),
+      ResetPage(),
+      // ProfilePage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
         backgroundColor: Colors.red,
-      ),
-      body: const Center(
-        child: Text(
-          'Admin Dashboard',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 20),
+        title: const Text("LOTTO 2025"),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: ClipOval(
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
+            ),
+          ),
         ),
+        actions: [IconButton(icon: const Icon(Icons.menu), onPressed: () {})],
+      ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: Container(
+        height: 70,
+        color: Color(0xFFDC3545),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            _buildNavItem(Icons.home, 'หน้าแรก', _currentIndex == 0, () {
+              setState(() => _currentIndex = 0);
+            }),
+            _buildNavItem(Icons.refresh, 'จัดการระบบ', _currentIndex == 1, () {
+              setState(() => _currentIndex = 1);
+            }),
+            _buildNavItem(Icons.person, 'โปรไฟล์', _currentIndex == 2, () {
+              setState(() => _currentIndex = 2);
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: isActive ? Colors.white : Colors.white70),
+          SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white70,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

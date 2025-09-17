@@ -1,6 +1,5 @@
 import 'package:Lotto2025/model/user/user_state.dart';
-// import 'package:Lotto2025/pages/admin/admin_dashboard.dart';
-import 'package:Lotto2025/pages/admin/random_lotto.dart';
+import 'package:Lotto2025/pages/admin/admin_dashboard.dart';
 import 'package:Lotto2025/pages/dashboard.dart';
 import 'package:flutter/material.dart';
 
@@ -15,8 +14,7 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     if (UserState().isAdmin) {
-      return RandomLottoPage();
-      // return const AdminDashboardPage();
+      return AdminDashboardPage();
     } else {
       return const DashboardPage();
     }

@@ -1,248 +1,374 @@
-import 'dart:math';
+import 'dart:convert';
+import 'dart:developer';
+import 'dart:math' hide log;
 
+import 'package:Lotto2025/config/config.dart';
+import 'package:Lotto2025/model/user/user_state.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
-void main() {
-  runApp(RandomLottoPage());
-}
-
-class RandomLottoPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(home: RandomLottoPC());
-  }
-}
-
-class RandomLottoPC extends StatefulWidget {
+class RandomLottoPage extends StatefulWidget {
   @override
   _RandomLottoPageState createState() => _RandomLottoPageState();
 }
 
-class _RandomLottoPageState extends State<RandomLottoPC> {
-  List<String> currentNumbers = ['9', '9', '9', '9', '9', '9'];
+class _RandomLottoPageState extends State<RandomLottoPage> {
+  String currentNumbers = 'xxxxxx';
   final Random _random = Random();
+  bool isLoading = false;
 
-  void generateRandomNumbers() {
-    setState(() {
-      currentNumbers = List.generate(
-        6,
-        (index) => _random.nextInt(10).toString(),
+  List<Map<String, dynamic>> prizeData = [];
+  String apiEndpoint = '';
+  DateTime? lastUpdated;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRandomPage();
+  }
+
+  /// โหลดข้อมูลจริงจาก API (ถ้ามี)
+  Future<void> _loadRandomPage() async {
+    final config = await Configuration.getConfig();
+    apiEndpoint = config['apiEndpoint'] ?? '';
+
+    if (mounted) setState(() => isLoading = true);
+
+    try {
+      final token = UserState().token;
+      if (token == null) {
+        if (mounted) setState(() => isLoading = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('ไม่ได้เข้าสู่ระบบ: กรุณาเข้าสู่ระบบก่อน')),
+            );
+          }
+        });
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/lotto/results'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      log('GET ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200) {
+        final raw = jsonDecode(response.body);
+        if (raw is Map) {
+          final data = Map<String, dynamic>.from(raw);
+          if (data['success'] == true) {
+            updatePrizeData(data);
+            if (mounted) setState(() => lastUpdated = DateTime.now());
+          } else {
+            final msg = (data['message'] ?? 'โหลดข้อมูลไม่สำเร็จ').toString();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+            });
+          }
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('รูปแบบข้อมูลจาก API ไม่ถูกต้อง')));
+          });
+        }
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('โหลดข้อมูลไม่สำเร็จ (${response.statusCode})')));
+        });
+      }
+    } catch (e, st) {
+      log('Error loading results: $e\n$st');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ')));
+      });
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  /// อัปเดต prizeData และรีเฟรช UI
+  void updatePrizeData(Map<String, dynamic> data) {
+	if (data['success'] == true) {
+		setState(() {
+			prizeData = (data['lotto_results'] as List<dynamic>? ?? [])
+				.map((e) => Map<String, dynamic>.from(e as Map))
+				.toList();
+
+			// ✅ ตั้ง currentNumbers จากรางวัล "ตัวสุดท้าย" (fallback ถ้าไม่มี)
+			if (prizeData.isNotEmpty) {
+				final last = prizeData.last;
+				final numStr = (last['number'] ?? '').toString();
+				if (numStr.length >= 6) {
+					currentNumbers = numStr.substring(0, 6);
+				} else {
+					currentNumbers = numStr.padLeft(6, '0');
+				}
+			} else {
+				currentNumbers = '000000';
+			}
+		});
+	}
+}
+
+
+  void _showSnackBarSafely(String message) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+        ),
       );
     });
   }
 
-  void resetNumbers() {
-    setState(() {
-      currentNumbers = ['9', '9', '9', '9', '9', '9'];
-    });
+  // =================== ฟังก์ชันเรียก API สุ่มเลข ===================
+  Future<void> generateRandomNumbers(String type) async {
+    if (apiEndpoint.isEmpty) {
+      _showSnackBarSafely('ยังไม่ได้กำหนด API endpoint');
+      return;
+    }
+
+    if (mounted) setState(() => isLoading = true);
+
+    try {
+      final token = UserState().token;
+      if (token == null) {
+        _showSnackBarSafely('ไม่ได้เข้าสู่ระบบ: กรุณาเข้าสู่ระบบก่อน');
+        return;
+      }
+
+      final uri = Uri.parse('$apiEndpoint/lotto/prize_draw');
+      final payload = {'prize_draw_type': type};
+      final body = jsonEncode(payload);
+
+      log('POST $uri payload=$body');
+
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: body,
+      );
+
+      log('POST ${response.statusCode}: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 400) {
+        try {
+          final raw = jsonDecode(response.body);
+          if (raw is Map) {
+            final data = Map<String, dynamic>.from(raw);
+            final msg = (data['message'] ?? 'เกิดข้อผิดพลาด').toString();
+            _showSnackBarSafely(msg);
+
+            // อ่าน numbers ให้เป็น string ตัวแรก
+            if (data['numbers'] != null && data['numbers'] is List && data['numbers'].isNotEmpty) {
+              final firstNumber = data['numbers'][0].toString();
+              setState(() {
+                currentNumbers = firstNumber.padLeft(6, '0');
+              });
+            }
+
+            //  refresh เพื่อ sync กับ server
+            await _handleRefresh();
+
+            if (data['success'] != true) {
+              log('prize_draw returned failure: $msg');
+            }
+          } else {
+            _showSnackBarSafely('รูปแบบ response จาก server ไม่ถูกต้อง');
+          }
+        } catch (_) {
+          _showSnackBarSafely('ไม่สามารถอ่านข้อความจาก server');
+        }
+      } else {
+        _showSnackBarSafely('เกิดข้อผิดพลาด HTTP ${response.statusCode}');
+        log('HTTP error on prize_draw: ${response.statusCode}, body: ${response.body}');
+      }
+    } catch (e, st) {
+      log('Error on prize_draw: $e\n$st');
+      _showSnackBarSafely('เกิดข้อผิดพลาดในการเชื่อมต่อขณะสุ่มรางวัล');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // ================================================================
+
+  /// Refresh handler for pull-to-refresh
+  Future<void> _handleRefresh() async {
+    await _loadRandomPage();
   }
 
   @override
   Widget build(BuildContext context) {
+    // ถ้าโหลดข้อมูลอยู่ ให้แสดง loading หน้าเดียว
+    if (isLoading && prizeData.isEmpty) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final displayNumbers = (currentNumbers.isNotEmpty ? currentNumbers : '000000').padLeft(6, '0');
+
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(0xFFDC3545),
-        elevation: 0,
-        leading: Container(
-          margin: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.apps, color: Color(0xFF4CAF50), size: 24),
-        ),
-        title: Text(
-          'InwzaLotto',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Random Number Generator Section
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.1),
-                      spreadRadius: 1,
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'ลอตโต้ประจำวันที่ 1 สิงหาคม 2568',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 12),
-                    Text(
-                      'กดปุ่มเพื่อสุ่มตัวเลขการออกรางวัล',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color(0xFFFFB3BA), // สีแดงอ่อน/ชมพูอ่อน
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: currentNumbers.map((number) {
-                          return Container(
-                            width: 35,
-                            height: 35,
-                            child: Center(
-                              child: Text(
-                                number,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    // Random + Second Button
-                    Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: generateRandomNumbers,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFFDC3545),
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: Text(
-                                'สุ่มออกรางวัลลอตโต้ที่ขายไปแล้ว',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                                softWrap: true,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: generateRandomNumbers,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFFDC3545),
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: Text(
-                                'สุ่มออกรางวัลสุ่มออกรางวัลลอตโต้ทั้งหมด',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                                softWrap: true,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: 24),
-              Column(
-                children: [
-                  _buildPrizeCard(
-                    'รางวัลที่ 1',
-                    'รางวัลละ 6,000,000 บาท',
-                    '999999',
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            // บล็อกแสดงเลข
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                  SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลที่ 2',
-                    'รางวัลละ 200,000 บาท',
-                    '999999',
-                  ),
-                  SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลที่ 3',
-                    'รางวัลละ 80,000 บาท',
-                    '999999',
-                  ),
-                  SizedBox(height: 12),
-                  _buildPrizeCard('รางวัลที่ 4', 'รางวัลละ 40,000 บาท', '999'),
-                  SizedBox(height: 12),
-                  _buildPrizeCard('รางวัลที่ 5', 'รางวัลละ 20,000 บาท', '99'),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
-
-      // Bottom Navigation Bar (ไม่มีความโค้งมน)
-      bottomNavigationBar: Container(
-        height: 70,
-        color: Color(0xFFDC3545), // ไม่มี borderRadius
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildNavItem(Icons.home, 'หน้าแรก', true),
-            _buildNavItem(Icons.refresh, 'รีเซ็ทระบบ', false),
-            _buildNavItem(Icons.person, 'แอดมิน', false),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ลอตโต้ประจำวันที่ 1 ตุลาคม 2568',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'กดปุ่มเพื่อสุ่มตัวเลขการออกรางวัล',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 8),
+                  if (lastUpdated != null)
+                    Text(
+                      'อัปเดตล่าสุด: ${lastUpdated!.toLocal().toString().split('.').first}',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFB3BA),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: displayNumbers.split('').map((number) {
+                        return Container(
+                          width: 35,
+                          height: 35,
+                          child: Center(
+                            child: Text(
+                              number,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  // ปุ่มสุ่มเลข
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : () => generateRandomNumbers("sold"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDC3545),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          ),
+                          child: const Text(
+                            'สุ่มออกรางวัลจากที่ขาย',
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : () => generateRandomNumbers("all"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDC3545),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                          ),
+                          child: const Text(
+                            'สุ่มออกรางวัลจากทั้งหมด',
+                            textAlign: TextAlign.center,
+                            softWrap: true,
+                            style: TextStyle(fontSize: 14),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // แสดงรางวัล
+            if (prizeData.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      )
+                    ]),
+                child: const Center(child: Text('ยังไม่มีข้อมูลรางวัลจาก API')),
+              )
+            else
+              ...prizeData.asMap().entries.map((entry) {
+                final index = entry.key;
+                final Map<String, dynamic> prize = entry.value;
+                return Column(
+                  children: [
+                    _buildPrizeCard(
+                      prize['title']?.toString() ?? '',
+                      prize['amount']?.toString() ?? '',
+                      prize['number']?.toString() ?? '',
+                    ),
+                    if (index < prizeData.length - 1) const SizedBox(height: 12),
+                  ],
+                );
+              }).toList(),
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -260,7 +386,7 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
             color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 4,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -268,70 +394,40 @@ class _RandomLottoPageState extends State<RandomLottoPC> {
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Color(0xFFDC3545),
-              borderRadius: BorderRadius.only(
+              color: const Color(0xFFDC3545),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  prizeTitle,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    prizeTitle.isNotEmpty ? prizeTitle : '(ไม่มีชื่อรางวัล)',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Text(
-                  prizeAmount,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                const SizedBox(width: 8),
+                Text(prizeAmount.isNotEmpty ? prizeAmount : '-', style: const TextStyle(color: Colors.white, fontSize: 12)),
               ],
             ),
           ),
           Container(
             width: double.infinity,
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: Text(
-                number,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                  letterSpacing: 4,
-                ),
+                number.isNotEmpty ? number : '-',
+                style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: 4),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildNavItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: isActive ? Colors.white : Colors.white70),
-        SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-      ],
     );
   }
 }

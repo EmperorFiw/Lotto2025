@@ -1,4 +1,3 @@
-import { RowDataPacket } from "mysql2/promise";
 import { pool } from "../database/db";
 const LOTTO_PRICE: number = process.env.LOTTO_PRICE ? parseInt(process.env.LOTTO_PRICE) : 80;
 
@@ -198,42 +197,81 @@ export async function purchaseLotto(
 }
 
 export async function hasBeenDrawn(): Promise<boolean> {
-  try {
-      const [rows] = await pool.query<RowDataPacket[]>(
-          "SELECT id FROM lotto_results LIMIT 1"
+    try {
+      const [rows]: any = await pool.query(
+        "SELECT COUNT(*) as count FROM lotto_results"
       );
-      return rows.length > 0;
-  } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการตรวจสอบรางวัล:", error);
+      return rows[0].count >= 5;
+    } catch (error) {
+      console.error("Error checking if lottery has been drawn:", error);
       return false;
-  }
+    }
 }
-export async function createLottoResults(lottoNumber: string[]): Promise<boolean> {
-  try {
-      const prizeAmount: string[] = ["6000000", "200000", "80000", "4000", "2000"];
 
-      // รางวัลที่ 1-3
-      for (let i = 0; i < 3; i++) {
-          await pool.query(
-              "INSERT INTO lotto_results (prize_name, prize_amount, lotto_number) VALUES (?, ?, ?)", 
-              [`รางวัลที่ ${i + 1}`, prizeAmount[i], lottoNumber[i]]
-          );
-      }
+export async function getPrizeDraw(): Promise<number> {
+    try {
+        const [rows]: any = await pool.query(
+            "SELECT COUNT(*) as count FROM lotto_results"
+        );
+        return rows[0].count; // คืนจำนวนรางวัลที่ออกไปแล้ว
+    } catch (error) {
+        console.error("Error :", error);
+        return 0; // ถ้า error ถือว่ายังไม่มีรางวัล
+    }
+}
+export async function createLottoResults(lottoResults: string[]): Promise<string | false> {
+	try {
+		const prizeAmount = ["6000000", "200000", "80000", "4000", "2000"];
+		const prizeNames = ["รางวัลที่ 1", "รางวัลที่ 2", "รางวัลที่ 3", "เลขท้าย 3 ตัว", "เลขท้าย 2 ตัว"];
 
-      // เลขท้าย 3 ตัว
-      await pool.query(
-          "INSERT INTO lotto_results (prize_name, prize_amount, lotto_number) VALUES (?, ?, ?)", 
-          ["เลขท้าย 3 ตัว", prizeAmount[3], lottoNumber[3]]
-      ); 
+		// ตรวจสอบว่ามีเลขขายแล้วเพียงพอ
+		if (!lottoResults || lottoResults.length < 5) {
+			console.error("ไม่พบเลขล็อตเตอรี่เพียงพอสำหรับการจับรางวัล");
+			return false;
+		}
 
-      // เลขท้าย 2 ตัว
-      await pool.query(
-          "INSERT INTO lotto_results (prize_name, prize_amount, lotto_number) VALUES (?, ?, ?)", 
-          ["เลขท้าย 2 ตัว", prizeAmount[4], lottoNumber[4]]
-      ); 
-      return true;
-  } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการตรวจสอบรางวัล:", error);
-      return false;
-  }
+		// ดึงจำนวนรางวัลที่ออกแล้ว
+		const [rows]: any = await pool.query("SELECT COUNT(*) as count FROM lotto_results");
+		const count = rows[0].count;
+
+		if (count >= 5) {
+			console.log("จับรางวัลครบแล้ว");
+			return false;
+		}
+
+		let numberToInsert: string;
+
+		if (count <= 2) {
+			// รางวัลที่ 1–3: สุ่มจาก list ที่มีอยู่
+			const randomIndex = Math.floor(Math.random() * lottoResults.length);
+			numberToInsert = lottoResults[randomIndex];
+
+			// เอาเลขที่ใช้แล้วออก เพื่อไม่ให้ซ้ำ
+			lottoResults.splice(randomIndex, 1);
+
+		} else if (count === 3) {
+			// เลขท้าย 3 ตัว: อิงจากรางวัลที่ 1
+			const [firstRow]: any = await pool.query(
+				"SELECT lotto_number FROM lotto_results WHERE prize_name = 'รางวัลที่ 1' LIMIT 1"
+			);
+			numberToInsert = firstRow[0].lotto_number.slice(-3);
+
+		} else {
+			// เลขท้าย 2 ตัว: สุ่มใหม่จาก list
+			const randomIndex = Math.floor(Math.random() * lottoResults.length);
+			numberToInsert = lottoResults[randomIndex].slice(-2);
+		}
+
+		await pool.query(
+			"INSERT INTO lotto_results (prize_name, prize_amount, lotto_number) VALUES (?, ?, ?)",
+			[prizeNames[count], prizeAmount[count], numberToInsert]
+		);
+
+		console.log(`ออกเลขรางวัล ${prizeNames[count]}: ${numberToInsert}`);
+		return numberToInsert;
+
+	} catch (error) {
+		console.error("เกิดข้อผิดพลาดในการบันทึกรางวัล:", error);
+		return false;
+	}
 }
