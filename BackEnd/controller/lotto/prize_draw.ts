@@ -34,10 +34,14 @@ router.post("/", async (req, res) => {
                     prize.push(number);
                 }
             }
-            
+            prize[3] = prize[0].slice(-3);
+            prize[4] = prize[4].slice(-2);
             if (!await createLottoResults(prize))
             {
-                
+                return res.status(500).json({
+                    success: false,
+                    message: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์ กรุณาลองใหม่ภายหลัง",
+                });
             }
             console.log("เลขล็อตเตอรี่ที่สุ่มได้:", prize);
             

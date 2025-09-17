@@ -33,12 +33,10 @@ export async function fetchLotto(type: string = "available"): Promise<string[]> 
   }
 }
 
-
 /**
  * 
  * @param username 
  * @param number 
- * @param isWin 
  * @returns 
  */
 export async function WonPrize(
@@ -225,13 +223,13 @@ export async function createLottoResults(lottoNumber: string[]): Promise<boolean
       // เลขท้าย 3 ตัว
       await pool.query(
           "INSERT INTO lotto_results (prize_name, prize_amount, lotto_number) VALUES (?, ?, ?)", 
-          ["เลขท้าย 3 ตัว", prizeAmount[3], lottoNumber[0].slice(-3)]
+          ["เลขท้าย 3 ตัว", prizeAmount[3], lottoNumber[3]]
       ); 
 
       // เลขท้าย 2 ตัว
       await pool.query(
           "INSERT INTO lotto_results (prize_name, prize_amount, lotto_number) VALUES (?, ?, ?)", 
-          ["เลขท้าย 2 ตัว", prizeAmount[4], lottoNumber[4].slice(-2)]
+          ["เลขท้าย 2 ตัว", prizeAmount[4], lottoNumber[4]]
       ); 
       return true;
   } catch (error) {
