@@ -1,207 +1,342 @@
+import 'dart:convert';
+import 'dart:developer';
+import 'dart:math' hide log;
+
+import 'package:Lotto2025/config/config.dart';
+import 'package:Lotto2025/model/user/user_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 class CheckPrize extends StatefulWidget {
   const CheckPrize({super.key});
-
   @override
   State<CheckPrize> createState() => _CheckPrizeState();
 }
 
 class _CheckPrizeState extends State<CheckPrize> {
-  final FocusNode firstFieldFocus = FocusNode();
-  final List<FocusNode> focusNodes = List.generate(6, (_) => FocusNode());
-
-  // เก็บค่าหมายเลข 6 หลัก
-  List<String> currentNumbers = List.filled(6, '-');
   // ตัวควบคุม TextField
-  final List<TextEditingController> controller = List.generate(
-    6,
-    (_) => TextEditingController(),
-  );
+  final TextEditingController lotteryController = TextEditingController();
+  // เก็บค่าหมายเลข 6 หลัก
+  String currentNumbers = '------';
 
-  // ฟังก์ชันตรวจรางวัล
-  void checkPrizeLotto() {
-    final inputNumber = controller[0].text;
-
-    if (inputNumber.length < 6 || inputNumber.isEmpty) {
-      // ถ้าไม่ครบ 6 หลัก
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 5,
-          backgroundColor: const Color.fromARGB(255, 241, 185, 185),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.warning,
-                  size: 48,
-                  color: const Color.fromARGB(255, 255, 234, 5),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'ตัวเลขสลากไม่ครบ',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-
-                Text(
-                  'กรุณากรอกเลขสลากให้ครบ 6 ตัวเลข',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-
-                  textAlign: TextAlign.center,
-                ),
-
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.yellow[700],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'ยืนยัน',
-                    style: TextStyle(
-                      color: Color.fromARGB(255, 255, 255, 255),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-      return;
-    }
-
-    //ไม่ถูกรางวัล
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 5,
-        backgroundColor: const Color.fromARGB(255, 241, 185, 185),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'ผลการตรวจสลากหมายเลข',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                '$inputNumber',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  color: Color.fromARGB(255, 255, 4, 4),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'คุณไม่ถูกรางวัล',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'ยืนยัน',
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 255, 255, 255),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    // ถ้าตรวจถูกรางวัล (ตัวอย่างนี้สมมติถูกรางวัล)
-    // showDialog(
-    //   context: context,
-    //   builder: (context) => Dialog(
-    //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    //     elevation: 5,
-    //     backgroundColor: Colors.white,
-    //     child: Padding(
-    //       padding: const EdgeInsets.all(20),
-    //       child: Column(
-    //         mainAxisSize: MainAxisSize.min,
-    //         children: [
-    //           Icon(
-    //             Icons.check_box,
-    //             size: 48,
-    //             color: const Color.fromARGB(255, 44, 229, 8),
-    //           ),
-    //           const SizedBox(height: 16),
-    //           Text(
-    //             'ยินดีด้วยคุณถูกรางวัล',
-    //             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-    //           ),
-    //           const SizedBox(height: 8),
-    //           Text(
-    //             'หมายเลขที่คุณกรอก: $inputNumber',
-    //             textAlign: TextAlign.center,
-    //           ),
-    //           const SizedBox(height: 16),
-    //           ElevatedButton(
-    //             onPressed: () => Navigator.pop(context),
-    //             style: ElevatedButton.styleFrom(
-    //               backgroundColor: const Color.fromARGB(255, 16, 163, 35),
-    //               shape: RoundedRectangleBorder(
-    //                 borderRadius: BorderRadius.circular(12),
-    //               ),
-    //             ),
-    //             child: Text(
-    //               'ขึ้นเงินรางวัล',
-    //               style: TextStyle(
-    //                 color: Color.fromARGB(255, 255, 255, 255),
-    //                 fontWeight: FontWeight.bold,
-    //               ),
-    //             ),
-    //           ),
-    //         ],
-    //       ),
-    //     ),
-    //   ),
-    // );
-  }
+  List<Map<String, dynamic>> prizeData = [];
+  String apiEndpoint = '';
+  DateTime? lastUpdated;
+  bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    controller[0].clear();
+    _loadRandomPage();
+  }
+
+  /// โหลดข้อมูลจริงจาก API (ถ้ามี)
+  Future<void> _loadRandomPage() async {
+    final config = await Configuration.getConfig();
+    apiEndpoint = config['apiEndpoint'] ?? '';
+
+    if (mounted) setState(() => isLoading = true);
+
+    try {
+      final token = UserState().token;
+      if (token == null) {
+        if (mounted) setState(() => isLoading = false);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('ไม่ได้เข้าสู่ระบบ: กรุณาเข้าสู่ระบบก่อน'),
+              ),
+            );
+          }
+        });
+        return;
+      }
+
+      //ดึงรางวัล
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/lotto/results'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      log('GET ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200) {
+        final raw = jsonDecode(response.body);
+        if (raw is Map) {
+          final data = Map<String, dynamic>.from(raw);
+          if (data['success'] == true) {
+            updatePrizeData(data);
+            if (mounted) setState(() => lastUpdated = DateTime.now());
+          } else {
+            final message = (data['message'] ?? 'โหลดข้อมูลไม่สำเร็จ')
+                .toString();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted)
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(message)));
+            });
+          }
+        } else {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('รูปแบบข้อมูลจาก API ไม่ถูกต้อง')),
+              );
+          });
+        }
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('โหลดข้อมูลไม่สำเร็จ (${response.statusCode})'),
+              ),
+            );
+        });
+      }
+    } catch (e, st) {
+      log('Error loading results: $e\n$st');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('เกิดข้อผิดพลาดในการเชื่อมต่อ')),
+          );
+      });
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  /// อัปเดต prizeData และรีเฟรช UI
+  void updatePrizeData(Map<String, dynamic> data) {
+    if (data['success'] == true) {
+      setState(() {
+        prizeData = List<Map<String, dynamic>>.from(
+          data['lotto_results'] ?? [],
+        );
+
+        // ✅ ตั้งค่า currentNumbers จากเลขรางวัลที่ 1 (หรือ fallback ถ้าไม่มี)
+        if (prizeData.isNotEmpty) {
+          final firstPrize = prizeData.first;
+          final numStr = (firstPrize['number'] ?? '').toString();
+
+          currentNumbers = numStr.padLeft(6, '0');
+        } else {
+          currentNumbers = '000000';
+        }
+      });
+    }
+  }
+
+  // ฟังก์ชันตรวจรางวัล
+  Future<void> checkPrizeLotto() async {
+    final inputNumber = lotteryController.text;
+
+    try {
+      final token = UserState().token;
+      if (token == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse("$apiEndpoint/lotto/check_lotto"),
+        headers: {
+          "Content-Type": "application/json",
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({"number": inputNumber}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception("Server error: ${response.statusCode}");
+      }
+
+      final data = jsonDecode(response.body);
+      if (!mounted) return;
+
+      final bool isWon = data["success"] == true;
+      final String message = data["message"];
+
+      if (inputNumber.length < 6 || inputNumber.isEmpty) {
+        // ถ้าไม่ครบ 6 หลัก
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 5,
+            backgroundColor: const Color.fromARGB(255, 241, 185, 185),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.warning,
+                    size: 48,
+                    color: const Color.fromARGB(255, 255, 234, 5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'ตัวเลขสลากไม่ครบ',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+
+                  Text(
+                    'กรุณากรอกเลขสลากให้ครบ 6 ตัวเลข',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.yellow[700],
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'ยืนยัน',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (isWon) {
+        // ถ้าตรวจถูกรางวัล
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 5,
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.check_box,
+                    size: 48,
+                    color: const Color.fromARGB(255, 44, 229, 8),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'ยินดีด้วยคุณถูกรางวัล',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(message, textAlign: TextAlign.center), // แสดง massage
+                  const SizedBox(height: 16),
+
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 16, 163, 35),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'ตกลง',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      } else {
+        //ไม่ถูกรางวัล
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 5,
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.close,
+                    size: 50,
+                    color: const Color.fromARGB(255, 246, 0, 82),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'คุณไม่ถูกรางวัล',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(message, textAlign: TextAlign.center), // แสดง massage
+                  const SizedBox(height: 16),
+
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color.fromARGB(255, 16, 163, 35),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'ตกลง',
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 255, 255, 255),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      _loadRandomPage();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
   }
 
   // ฟังก์ชันล้างค่า
   void resetNumbers() {
-    controller[0].clear();
+    lotteryController.clear();
   }
 
   @override
@@ -286,7 +421,7 @@ class _CheckPrizeState extends State<CheckPrize> {
                         child: SizedBox(
                           width: 240,
                           child: TextField(
-                            controller: controller[0],
+                            controller: lotteryController,
                             keyboardType: TextInputType.number,
                             textAlign: TextAlign.center,
                             maxLength: 6,
@@ -352,41 +487,42 @@ class _CheckPrizeState extends State<CheckPrize> {
               ),
               const SizedBox(height: 24),
 
-              // รายการรางวัล
-              Column(
-                children: [
-                  _buildPrizeCard(
-                    'รางวัลที่ 1',
-                    'รางวัลละ 6,000,000 บาท',
-                    '999999',
+              if (prizeData.isEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลที่ 2',
-                    'รางวัลละ 200,000 บาท',
-                    '999999',
+                  child: const Center(
+                    child: Text('ยังไม่มีข้อมูลรางวัลจาก API'),
                   ),
-                  const SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลที่ 3',
-                    'รางวัลละ 80,000 บาท',
-                    '999999',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลเลขสามตัวท้าย (ของรางวัลที่1)',
-                    'รางวัลละ 40,000 บาท',
-                    '999',
-                  ),
-
-                  const SizedBox(height: 12),
-                  _buildPrizeCard(
-                    'รางวัลสองตัวท้าย (รางวัลทั่วไป)',
-                    'รางวัลละ 20,000 บาท',
-                    '99',
-                  ),
-                ],
-              ),
+                )
+              else
+                ...prizeData.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final Map<String, dynamic> prize = entry.value;
+                  return Column(
+                    children: [
+                      _buildPrizeCard(
+                        prize['title']?.toString() ?? '',
+                        prize['amount']?.toString() ?? '',
+                        prize['number']?.toString() ?? '',
+                      ),
+                      if (index < prizeData.length - 1)
+                        const SizedBox(height: 12),
+                    ],
+                  );
+                }).toList(),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -394,7 +530,6 @@ class _CheckPrizeState extends State<CheckPrize> {
     );
   }
 
-  // การ์ดรางวัลแต่ละประเภท
   Widget _buildPrizeCard(String prizeTitle, String prizeAmount, String number) {
     return Container(
       width: double.infinity,
@@ -403,7 +538,7 @@ class _CheckPrizeState extends State<CheckPrize> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey,
+            color: Colors.grey.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, 2),
@@ -412,13 +547,12 @@ class _CheckPrizeState extends State<CheckPrize> {
       ),
       child: Column(
         children: [
-          // ส่วนหัว
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFDC3545),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: const Color(0xFFDC3545),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
@@ -426,51 +560,32 @@ class _CheckPrizeState extends State<CheckPrize> {
             child: Row(
               children: [
                 Expanded(
-                  flex: 1,
                   child: Text(
-                    prizeTitle,
+                    prizeTitle.isNotEmpty ? prizeTitle : '(ไม่มีชื่อรางวัล)',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
-                    softWrap: true,
-                    overflow: TextOverflow.visible,
-                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 1,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      prizeAmount,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      softWrap: false,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                const SizedBox(width: 8),
+                Text(
+                  prizeAmount.isNotEmpty ? prizeAmount : '-',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ],
             ),
           ),
-
-          // หมายเลขรางวัล
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Center(
               child: Text(
-                number,
+                number.isNotEmpty ? number : '-',
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
                   letterSpacing: 4,
                 ),
               ),
