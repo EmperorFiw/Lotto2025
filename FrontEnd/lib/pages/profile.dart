@@ -323,22 +323,47 @@ class _ProfilePageState extends State<ProfilePage> {
                               const SizedBox(height: 16),
                               GestureDetector(
                                 onTap: () async {
-                                  await UserState().logout();
-                                  // กลับไปหน้า login
-                                  Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                                  final confirm = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) {
+                                      return AlertDialog(
+                                        title: const Text("ยืนยันการออกจากระบบ"),
+                                        content: const Text("คุณต้องการออกจากระบบจริงหรือไม่?"),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, false),
+                                            child: const Text("ยกเลิก"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx, true),
+                                            child: const Text(
+                                              "ออกจากระบบ",
+                                              style: TextStyle(color: Colors.red),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   );
+
+                                  if (confirm == true) {
+                                    await UserState().logout();
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                                    );
+                                  }
                                 },
                                 child: const Text(
                                   'ออกจากระบบ',
                                   style: TextStyle(
-                                    color: Colors.redAccent, // เปลี่ยนสีให้เด่น
+                                    color: Colors.redAccent,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              )
+                              ),
+
 
                             ],
                           ),
