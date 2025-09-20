@@ -75,7 +75,9 @@ class _DashboardPageState extends State<DashboardPage> {
       } else {
         log('HTTP error: ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('โหลดข้อมูลไม่สำเร็จ (${response.statusCode})')),
+          SnackBar(
+            content: Text('โหลดข้อมูลไม่สำเร็จ (${response.statusCode})'),
+          ),
         );
       }
     } catch (e) {
@@ -119,8 +121,8 @@ class _DashboardPageState extends State<DashboardPage> {
           final priceNum = priceRaw is int
               ? priceRaw
               : (priceRaw is double
-                  ? priceRaw.toInt()
-                  : int.tryParse(priceRaw.toString()) ?? 0);
+                    ? priceRaw.toInt()
+                    : int.tryParse(priceRaw.toString()) ?? 0);
           final newMoney = user.money - priceNum;
           UserState().updateMoney(newMoney);
         }
@@ -190,7 +192,10 @@ class _DashboardPageState extends State<DashboardPage> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "หน้าแรก"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "ตรวจรางวัล"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: "ตรวจรางวัล",
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "โปรไฟล์"),
         ],
       ),
@@ -199,7 +204,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Widget _buildHomePage(int selectedCount, int totalPrice, int wallet) {
     if (isLoading) return const Center(child: CircularProgressIndicator());
-    if (numbers.isEmpty) return const Center(child: Text("ไม่พบข้อมูลลอตเตอรี่"));
+    if (numbers.isEmpty)
+      return const Center(child: Text("ไม่พบข้อมูลลอตเตอรี่"));
 
     List<String> selectedNumbers = [];
     for (int i = 0; i < numbers.length; i++) {
@@ -208,8 +214,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
     return StatefulBuilder(
       builder: (context, setInnerState) {
-        final displayedNumbers =
-            numbers.where((num) => num.contains(searchText)).toList();
+        final displayedNumbers = numbers
+            .where((num) => num.contains(searchText))
+            .toList();
 
         return Stack(
           children: [
@@ -246,7 +253,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: displayedNumbers.length,
                     itemBuilder: (context, index) {
-                      final mainIndex = numbers.indexOf(displayedNumbers[index]);
+                      final mainIndex = numbers.indexOf(
+                        displayedNumbers[index],
+                      );
                       return Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -260,7 +269,9 @@ class _DashboardPageState extends State<DashboardPage> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.pink.shade50,
                                   borderRadius: BorderRadius.circular(6),
@@ -312,7 +323,9 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: Text(
                                       selected[mainIndex] ? "เอาออก" : "เลือก",
                                       style: const TextStyle(
-                                          color: Colors.white, fontSize: 16),
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -333,7 +346,9 @@ class _DashboardPageState extends State<DashboardPage> {
                 bottom: 1,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      vertical: 15, horizontal: 18),
+                    vertical: 15,
+                    horizontal: 18,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade900,
                     boxShadow: const [
@@ -383,9 +398,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                   child: const Text(
                                     "ยกเลิก",
                                     style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
                                   ),
                                   onPressed: () => Navigator.pop(context),
                                 ),
@@ -393,9 +409,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                   child: const Text(
                                     "ชำระเงิน",
                                     style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
                                   ),
                                   onPressed: () {
                                     Navigator.pop(context);
