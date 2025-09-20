@@ -200,12 +200,10 @@ export async function purchaseLotto(
             };
         }
 
-        // ซื้อทั้งหมด: update status
-        //TODO:::
-        // await pool.query(
-        //     "UPDATE lotto SET status = 'sold' WHERE lotto_number IN (?)",
-        //     [numbers]
-        // );
+        await pool.query(
+            "UPDATE lotto SET status = 'sold' WHERE lotto_number IN (?)",
+            [numbers]
+        );
 
         // หักเงินผู้ใช้
         await pool.query(
