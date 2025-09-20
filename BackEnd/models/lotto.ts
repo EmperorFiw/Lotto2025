@@ -38,69 +38,178 @@ export async function fetchLotto(type: string = "available"): Promise<string[]> 
  * @param number 
  * @returns 
  */
+// export async function WonPrize(
+// 	username: string,
+// 	number: string
+// ): Promise<string> {
+// 	try {
+// 		// แยกเลขท้าย
+// 		const last3 = number.slice(-3);
+// 		const last2 = number.slice(-2);
+
+// 		const [rows]: any = await pool.query(
+// 			`SELECT h.hid, lr.prize_name, lr.prize_amount, lr.lotto_number
+// 			 FROM history h
+// 			 RIGHT JOIN lotto_results lr
+// 			   ON (lr.lotto_number = h.lotto_number 
+// 			       OR RIGHT(lr.lotto_number, 3) = ? 
+// 			       OR RIGHT(lr.lotto_number, 2) = ?)
+// 			   AND h.user_id = (SELECT uid FROM users WHERE username = ?)
+// 			 WHERE lr.lotto_number = ? 
+// 			    OR RIGHT(lr.lotto_number,3) = ? 
+// 			    OR RIGHT(lr.lotto_number,2) = ?`,
+// 			[last3, last2, username, number, last3, last2]
+// 		);
+
+// 		if (!rows || rows.length === 0) {
+// 			return `เสียใจด้วย เลข ${number} ไม่ถูกรางวัล`;
+// 		}
+
+// 		// เลือกแถวที่ตรงที่สุด: 6 หลัก > 3 ตัว > 2 ตัว
+// 		let prizeRow: LottoRow | undefined = rows.find((r: LottoRow) => r.lotto_number === number)
+// 			|| rows.find((r: LottoRow) => r.lotto_number.endsWith(last3))
+// 			|| rows.find((r: LottoRow) => r.lotto_number.endsWith(last2));
+
+// 		if (!prizeRow) {
+// 			return `เสียใจด้วย เลข ${number} ไม่ถูกรางวัล`;
+// 		}
+
+// 		const hasHistory = prizeRow.hid != null;
+
+// 		// อัปเดต status ถ้าเคยซื้อ
+// 		// if (hasHistory) {
+// 		// 	await pool.query(
+// 		// 		"UPDATE history SET status = 2 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
+// 		// 		[number, username]
+// 		// 	);
+// 		// }
+
+// 		// คืนข้อความตามเงื่อนไข
+// 		if (prizeRow.lotto_number === number) {
+// 			return `ยินดีด้วย! เลข ${number} ถูกรางวัล ${prizeRow.prize_name} \nเงินรางวัล ${prizeRow.prize_amount} บาท`;
+// 		} else if (prizeRow.lotto_number.endsWith(last3)) {
+// 			return `ยินดีด้วย! เลข ${number} ถูกรางวัลเลขท้าย 3 ตัว \nเงินรางวัล ${prizeRow.prize_amount} บาท`;
+// 		} else if (prizeRow.lotto_number.endsWith(last2)) {
+// 			return `ยินดีด้วย! เลข ${number} ถูกรางวัลเลขท้าย 2 ตัว \nเงินรางวัล ${prizeRow.prize_amount} บาท`;
+// 		}
+
+// 		return `เสียใจด้วย เลข ${number} ไม่ถูกรางวัล`;
+
+// 	} catch (error) {
+// 		console.error("เกิดข้อผิดพลาดในการอัปเดต history:", error);
+// 		return "Internal Server Error!";
+// 	}
+// }
 export async function WonPrize(
 	username: string,
 	number: string
 ): Promise<string> {
 	try {
-		// แยกเลขท้าย
 		const last3 = number.slice(-3);
 		const last2 = number.slice(-2);
 
+		// ดึงรางวัลที่เกี่ยวข้อง
 		const [rows]: any = await pool.query(
-			`SELECT h.hid, lr.prize_name, lr.prize_amount, lr.lotto_number
-			 FROM history h
-			 RIGHT JOIN lotto_results lr
-			   ON (lr.lotto_number = h.lotto_number 
-			       OR RIGHT(lr.lotto_number, 3) = ? 
-			       OR RIGHT(lr.lotto_number, 2) = ?)
-			   AND h.user_id = (SELECT uid FROM users WHERE username = ?)
+			`SELECT lr.prize_name, lr.prize_amount, lr.lotto_number
+			 FROM lotto_results lr
 			 WHERE lr.lotto_number = ? 
-			    OR RIGHT(lr.lotto_number,3) = ? 
-			    OR RIGHT(lr.lotto_number,2) = ?`,
-			[last3, last2, username, number, last3, last2]
+			    OR RIGHT(?,3) = lr.lotto_number
+			    OR RIGHT(?,2) = lr.lotto_number`,
+			[number, number, number]
 		);
 
+		// ดึงสถานะปัจจุบันของ history
+		const [historyRows]: any = await pool.query(
+			`SELECT status 
+			 FROM history 
+			 WHERE user_id = (SELECT uid FROM users WHERE username = ?) 
+			   AND lotto_number = ?`,
+			[username, number]
+		);
+
+		let currentStatus = historyRows.length > 0 ? historyRows[0].status : null;
+
+		// ถ้าเคยขึ้นเงินไปแล้ว (status=3) → ห้ามทำต่อ
+		if (currentStatus === 3) {
+			return `ลอตเตอรี่เลข ${number} ถูกขึ้นเงินไปแล้ว`;
+		}
+
 		if (!rows || rows.length === 0) {
+			// ไม่ถูกรางวัล
+			if (currentStatus === 0) {
+				await pool.query(
+					`UPDATE history 
+					 SET status = 1 
+					 WHERE user_id = (SELECT uid FROM users WHERE username = ?) 
+					   AND lotto_number = ?`,
+					[username, number]
+				);
+			}
 			return `เสียใจด้วย เลข ${number} ไม่ถูกรางวัล`;
 		}
 
-		// เลือกแถวที่ตรงที่สุด: 6 หลัก > 3 ตัว > 2 ตัว
-		let prizeRow: LottoRow | undefined = rows.find((r: LottoRow) => r.lotto_number === number)
-			|| rows.find((r: LottoRow) => r.lotto_number.endsWith(last3))
-			|| rows.find((r: LottoRow) => r.lotto_number.endsWith(last2));
+		// เลือกแถวรางวัลที่ตรงที่สุด
+		let prizeRow: any;
+		prizeRow = rows.find((r: any) => r.lotto_number === number);
+		if (!prizeRow) {
+			prizeRow = rows.find((r: any) => r.prize_name === "เลขท้าย 3 ตัว" && last3 === r.lotto_number);
+		}
+		if (!prizeRow) {
+			prizeRow = rows.find((r: any) => r.prize_name === "เลขท้าย 2 ตัว" && last2 === r.lotto_number);
+		}
 
 		if (!prizeRow) {
+			// ไม่ถูกรางวัล
+			if (currentStatus === 0) {
+				await pool.query(
+					`UPDATE history 
+					 SET status = 1 
+					 WHERE user_id = (SELECT uid FROM users WHERE username = ?) 
+					   AND lotto_number = ?`,
+					[username, number]
+				);
+			}
 			return `เสียใจด้วย เลข ${number} ไม่ถูกรางวัล`;
 		}
 
-		const hasHistory = prizeRow.hid != null;
-
-		// อัปเดต status ถ้าเคยซื้อ
-		// if (hasHistory) {
-		// 	await pool.query(
-		// 		"UPDATE history SET status = 2 WHERE lotto_number = ? AND user_id = (SELECT uid FROM users WHERE username = ?)",
-		// 		[number, username]
-		// 	);
-		// }
-
-		// คืนข้อความตามเงื่อนไข
-		if (prizeRow.lotto_number === number) {
-			return `ยินดีด้วย! เลข ${number} ถูกรางวัล ${prizeRow.prize_name} \nเงินรางวัล ${prizeRow.prize_amount} บาท`;
-		} else if (prizeRow.lotto_number.endsWith(last3)) {
-			return `ยินดีด้วย! เลข ${number} ถูกรางวัลเลขท้าย 3 ตัว \nเงินรางวัล ${prizeRow.prize_amount} บาท`;
-		} else if (prizeRow.lotto_number.endsWith(last2)) {
-			return `ยินดีด้วย! เลข ${number} ถูกรางวัลเลขท้าย 2 ตัว \nเงินรางวัล ${prizeRow.prize_amount} บาท`;
+		// ถูกรางวัล
+		if (currentStatus === 0) {
+			if (prizeRow.prize_name === "เลขท้าย 3 ตัว") {
+				await pool.query(
+					`UPDATE history 
+					 SET status = 2 
+					 WHERE user_id = (SELECT uid FROM users WHERE username = ?) 
+					   AND RIGHT(lotto_number,3) = ?`,
+					[username, last3]
+				);
+			} else if (prizeRow.prize_name === "เลขท้าย 2 ตัว") {
+				await pool.query(
+					`UPDATE history 
+					 SET status = 2 
+					 WHERE user_id = (SELECT uid FROM users WHERE username = ?) 
+					   AND RIGHT(lotto_number,2) = ?`,
+					[username, last2]
+				);
+			} else {
+				// รางวัลที่ 1–3 ใช้เลขเต็ม
+				await pool.query(
+					`UPDATE history 
+					 SET status = 2 
+					 WHERE user_id = (SELECT uid FROM users WHERE username = ?) 
+					   AND lotto_number = ?`,
+					[username, number]
+				);
+			}
 		}
 
-		return `เสียใจด้วย เลข ${number} ไม่ถูกรางวัล`;
+		return `ยินดีด้วย! เลข ${number} ถูกรางวัล ${prizeRow.prize_name}\nเงินรางวัล ${prizeRow.prize_amount} บาท`;
 
 	} catch (error) {
 		console.error("เกิดข้อผิดพลาดในการอัปเดต history:", error);
 		return "Internal Server Error!";
 	}
 }
-        
+
 /**
  * 
  * @param username 
