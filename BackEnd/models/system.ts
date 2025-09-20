@@ -81,7 +81,6 @@ export async function simulateSystem(count = 200): Promise<string> {
       }
   
       console.log("simulateSystem inserted:", insertedNumbers.length, "numbers");
-      // (เลือกจะ log รายละเอียดเลขด้วยถ้าต้องการ)
       // console.log(insertedNumbers);
   
       return `จำลองระบบสำเร็จ สร้างเลข ${insertedNumbers.length} รายการ`;
